@@ -57,3 +57,17 @@ census_api_key("2b1d7cb91812dfd520e7ddd57f4d15506669735c", install = TRUE)
 # Reload .Renviron
 readRenviron("~/.Renviron")
 ```
+
+```{r}
+acs5_income <- 
+  get_acs(
+    geography = "tract",
+    variables = c("B19301_001"),
+    state = "OH",
+    county = "Lucas County",
+    year = 2011,
+    survey = "acs5",
+    geometry = TRUE
+  )
+```
+
