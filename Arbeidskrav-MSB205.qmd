@@ -22,6 +22,11 @@ library(tidycensus)
 ```
 
 ```{r}
+lc_ejscreen_map <- read_sf("./Data/EJ_Screen_2015_LucasCountyOH.gpkg")
+```
+
+
+```{r}
 # Foreslår at dere kaller kartet som inneholder dataene for lc_ejscreen_map
 lc_ejscreen_map <- lc_ejscreen_map |> 
   select(
