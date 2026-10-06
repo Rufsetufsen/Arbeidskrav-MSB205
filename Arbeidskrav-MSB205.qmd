@@ -18,4 +18,37 @@ library(tidycensus)
 library(gt)
 library(flextable)
 library(modelsummary)
+library(tidycensus)
+```
+
+```{r}
+# Foreslår at dere kaller kartet som inneholder dataene for lc_ejscreen_map
+lc_ejscreen_map <- lc_ejscreen_map |> 
+  select(
+    ID, # Census FIPS code for block group
+    
+    # Nabolagsvariabler
+    LINGISOPCT, # % of households (interpreted as individuals) in linguistic isolation
+    LOWINCPCT, # % low-income
+    LESSHSPCT, # % less than high school
+    OVER64PCT, # % over age 64
+    VULEOPCT, # Demographic Index (based on 2 factors, % low-income and % minority)
+    
+    # Miljøvariabler
+    PRE1960PCT, # % pre-1960 housing (lead paint indicator)
+    PTRAF, # % Traffic proximity and volume
+    PWDIS, # Proximity to major direct dischargers to water
+    PNPL, # Proximity to National Priorities List (NPL) sites
+    PRMP, # Proximity to Risk Management Plan (RMP) facilities
+    PTSDF, # Proximity to Treatment Storage and Disposal (TSDF) facilities
+    OZONE, # Ozone level in air
+    PM25 # PM2.5 level in air
+  )
+```
+
+
+```{r}
+census_api_key("2b1d7cb91812dfd520e7ddd57f4d15506669735c", install = TRUE)
+# Reload .Renviron
+readRenviron("~/.Renviron")
 ```
