@@ -71,3 +71,25 @@ acs5_income <-
   )
 ```
 
+
+```{r}
+# Installer pakken (trenger bare gjøres én gang)
+install.packages("spData")
+
+# Last inn pakken
+library(spData)
+
+# Last inn datasettet
+data("house")
+
+# Se på datasettet
+head(house)
+
+# Se variabelnavn og struktu
+names(house)
+str(house)
+
+# Antall observasjoner og variabler
+dim(house)
+```
+
