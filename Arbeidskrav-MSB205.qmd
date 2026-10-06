@@ -58,6 +58,29 @@ census_api_key("2b1d7cb91812dfd520e7ddd57f4d15506669735c", install = TRUE)
 readRenviron("~/.Renviron")
 ```
 
+### Boligdata
+
+```{r}
+data(house, package = "spData")
+
+lucas_house <- house |>
+  st_as_sf() |>
+  st_transform(2834)
+
+
+lucas_house <- lucas_house |>
+  mutate(
+    sale_date = ymd(sdate),
+    year_month = factor(format(sale_date, "%Y-%m"))
+  )
+
+range(lucas_house$sale_date)
+nlevels(lucas_house$year_month)
+```
+
+
+### Per Capita Income
+
 ```{r}
 acs5_income <- 
   get_acs(
@@ -71,3 +94,14 @@ acs5_income <-
   )
 ```
 
+### Race
+
+### Travel Time to Work
+
+### Median Household Income
+
+### Employment Status
+
+### Ratio of Income to Poverty Level
+
+### Merging data to full set
