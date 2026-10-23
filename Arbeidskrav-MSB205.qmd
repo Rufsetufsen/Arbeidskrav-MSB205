@@ -27,47 +27,6 @@ options(tigris_use_cache = TRUE)
 ```{r}
 lc_ejscreen_map <- read_sf("./Data/EJ_Screen_2015_LucasCountyOH.gpkg")
 ```
-
-
-```{r}
-# Foreslår at dere kaller kartet som inneholder dataene for lc_ejscreen_map
-lc_ejscreen_map <- lc_ejscreen_map |> 
-  select(
-    ID, # Census FIPS code for block group
-    
-    # Nabolagsvariabler
-    LINGISOPCT, # % of households (interpreted as individuals) in linguistic isolation
-    LOWINCPCT, # % low-income
-    LESSHSPCT, # % less than high school
-    OVER64PCT, # % over age 64
-    VULEOPCT, # Demographic Index (based on 2 factors, % low-income and % minority)
-    
-    # Miljøvariabler
-    PRE1960PCT, # % pre-1960 housing (lead paint indicator)
-    PTRAF, # % Traffic proximity and volume
-    PWDIS, # Proximity to major direct dischargers to water
-    PNPL, # Proximity to National Priorities List (NPL) sites
-    PRMP, # Proximity to Risk Management Plan (RMP) facilities
-    PTSDF, # Proximity to Treatment Storage and Disposal (TSDF) facilities
-    OZONE, # Ozone level in air
-    PM25 # PM2.5 level in air
-  )
-```
-
-
-
-```{r}
-acs5_income <- 
-  get_acs(
-    geography = "tract",
-    variables = c("B19301_001"),
-    state = "OH",
-    county = "Lucas County",
-    year = 2011,
-    survey = "acs5",
-    geometry = TRUE
-  )
-```
 # Oppgave 1
 
 ## 1.1 Laster inn og konverterer til SF 
@@ -205,5 +164,189 @@ sum(duplicated(lucas_ej$house_id))
 lucas_house |>
   filter(!house_id %in% lucas_ej$house_id) |>
   nrow()
+```
+
+# Oppgave 3
+
+```{r}
+#| label: acs-helpers
+census_var11 <- load_variables(2011, "acs5")
+
+hent_acs <- function(tabell, geometry = FALSE) {
+  vars <- census_var11 |>
+    filter(str_starts(name, paste0(tabell, "_"))) |>
+    pull(name)
+
+  get_acs(
+    geography = "tract",
+    variables = vars,
+    state = "OH",
+    county = "Lucas County",
+    year = 2011,
+    survey = "acs5",
+    geometry = geometry
+  )
+}
+
+# moe droppes, ellers får vi flere rader per tract
+til_wide <- function(df) {
+  df |>
+    select(GEOID, variable, estimate) |>
+    pivot_wider(names_from = variable, values_from = estimate)
+}
+```
+
+## Per Capita Inntekt
+
+```{r}
+#| label: acs-income
+acs5_income <- hent_acs("B19301", geometry = TRUE) |>
+  select(GEOID, NAME, pc_inntekt = estimate)
+
+nrow(acs5_income) # 128 (inkludert tract 9900)
+```
+
+## Etnisitet 
+
+```{r}
+#| label: acs-race
+acs5_race <- hent_acs("B02001") |>
+  til_wide() |>
+  transmute(
+    GEOID,
+    andel_hvit     = B02001_002 / B02001_001,
+    andel_svart    = B02001_003 / B02001_001,
+    andel_asiatisk = B02001_005 / B02001_001,
+    andel_andre    = (B02001_004 + B02001_006 + B02001_007) / B02001_001,
+    andel_blandet  = B02001_008 / B02001_001
+  )
+```
+
+## Pendletid
+
+```{r}
+#| label: acs-travel-time
+mid_time <- tibble(
+  variable = sprintf("B08303_%03d", 2:13),
+  mid = c(2.5, 7, 12, 17, 22, 27, 32, 37, 42, 52, 75, 105)
+)
+
+# inner_join() fjerner totalen B08303_001, så den ikke telles med
+acs5_mwtt <- hent_acs("B08303") |>
+  select(GEOID, variable, estimate) |>
+  inner_join(mid_time, by = "variable") |>
+  group_by(GEOID) |>
+  summarise(mwtt = sum(estimate * mid) / sum(estimate))
+
+head(acs5_mwtt, 5) # 39095000200 skal gi 22.22452
+```
+
+## Medianinntekt pr. Hushold
+```{r}
+#| label: acs-median-income
+acs5_hh_income <- hent_acs("B19013") |>
+  select(GEOID, median_hh_inntekt = estimate)
+```
+
+## Arbeidsstatus
+```{r}
+#| label: acs-employment
+# B23025_003 = sivil arbeidsstyrke, B23025_005 = arbeidsledige
+acs5_employment <- hent_acs("B23025") |>
+  til_wide() |>
+  transmute(
+    GEOID,
+    andel_ledige = B23025_005 / B23025_003
+  )
+```
+
+## Fattigdom
+```{r}
+#| label: acs-poverty
+# _002 og _003: under 1.00, _004 til _007: 1.00-1.99, _008: 2.00 og over
+acs5_poverty <- hent_acs("C17002") |>
+  til_wide() |>
+  transmute(
+    GEOID,
+    fattig_under1 = (C17002_002 + C17002_003) / C17002_001,
+    fattig_1til2  = (C17002_004 + C17002_005 + C17002_006 + C17002_007) / C17002_001,
+    fattig_over2  = C17002_008 / C17002_001
+  )
+```
+
+## Samlet datasett
+
+```{r}
+#| label: census-full
+census_full <- acs5_income |>
+  left_join(acs5_race, by = "GEOID") |>
+  left_join(acs5_mwtt, by = "GEOID") |>
+  left_join(acs5_hh_income, by = "GEOID") |>
+  left_join(acs5_employment, by = "GEOID") |>
+  left_join(acs5_poverty, by = "GEOID")
+
+# Vis rader med manglende verdier
+census_full |>
+  st_drop_geometry() |>
+  filter(if_any(-c(GEOID, NAME), is.na))
+
+census_full <- census_full |>
+  filter(GEOID != "39095990000")
+
+nrow(census_full) # skal være 127
+```
+
+## Projeksjon og vann
+```{r}
+#| label: census-water
+census_full <- census_full |>
+  st_transform(2834) |>
+  mutate(tract_name = fct(as.character(NAME))) |>
+  erase_water() |>
+  st_make_valid()
+
+nrow(census_full) # fortsatt 127
+summary(census_full)
+```
+
+## Kobler ACS til husdata
+
+```{r}
+#| label: acs-intersect
+lucas_full <- st_intersection(lucas_ej, census_full)
+
+nrow(lucas_ej)   # før
+nrow(lucas_full) # etter
+
+sum(duplicated(lucas_full$house_id))
+
+lucas_full <- lucas_full |>
+  distinct(house_id, .keep_all = TRUE)
+
+nrow(lucas_full)
+```
+
+## Kontroll og lagring
+
+```{r}
+#| label: lucas-full-check
+summary(lucas_full)
+
+# Antall NA per variabel (bør være 0 overalt)
+lucas_full |>
+  st_drop_geometry() |>
+  summarise(across(everything(), ~ sum(is.na(.x)))) |>
+  pivot_longer(everything(), names_to = "variabel", values_to = "antall_na") |>
+  filter(antall_na > 0)
+```
+
+```{r}
+#| label: lucas-full-save
+st_write(
+  obj = lucas_full,
+  dsn = here("Data", "lucas_full.gpkg"),
+  layer = "Lucas County housing data",
+  append = FALSE
+)
 ```
 
