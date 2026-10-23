@@ -68,6 +68,7 @@ acs5_income <-
     geometry = TRUE
   )
 ```
+# Oppgave 1
 
 ## 1.1 Laster inn og konverterer til SF 
 
@@ -119,5 +120,90 @@ lucas_house <- lucas_house |>
   )
 
 summary(lucas_house$dist_CBD)
+```
+# Oppgave 2
+
+## 2.1 Leser inn variabler
+```{r}
+#| label: ej-read
+lc_ejscreen_map <- read_sf(here("Data", "EJ_Screen_2015_LucasCountyOH.gpkg"))
+
+nrow(lc_ejscreen_map) # 398
+```
+
+```{r}
+#| label: ej-select
+lc_ejscreen_map <- lc_ejscreen_map |>
+  select(
+    ID, # Census FIPS code for block group
+
+    # Nabolagsvariabler
+    LINGISOPCT, # % of households (interpreted as individuals) in linguistic isolation
+    LOWINCPCT, # % low-income
+    LESSHSPCT, # % less than high school
+    OVER64PCT, # % over age 64
+    VULEOPCT, # Demographic Index (based on 2 factors, % low-income and % minority)
+
+    # Miljøvariabler
+    PRE1960PCT, # % pre-1960 housing (lead paint indicator)
+    PTRAF, # % Traffic proximity and volume
+    PWDIS, # Proximity to major direct dischargers to water
+    PNPL, # Proximity to National Priorities List (NPL) sites
+    PRMP, # Proximity to Risk Management Plan (RMP) facilities
+    PTSDF, # Proximity to Treatment Storage and Disposal (TSDF) facilities
+    OZONE, # Ozone level in air
+    PM25 # PM2.5 level in air
+  )
+```
+
+## 2.2 Fjerner NA og fikser projeksjon
+
+```{r}
+#| label: ej-clean
+lc_ejscreen_map <- st_transform(lc_ejscreen_map, 2834)
+
+# Vis radene som mangler luftdata (skal være én, i tract 9900)
+lc_ejscreen_map |>
+  st_drop_geometry() |>
+  filter(is.na(OZONE) | is.na(PM25))
+
+lc_ejscreen_map <- lc_ejscreen_map |>
+  filter(!is.na(OZONE), !is.na(PM25))
+
+nrow(lc_ejscreen_map) # skal være 397
+```
+
+## 2.3 Fjerner vann
+```{r}
+#| label: ej-water
+lc_ejscreen_map <- lc_ejscreen_map |>
+  erase_water() |>
+  st_make_valid()
+
+nrow(lc_ejscreen_map) # fortsatt 397
+```
+
+## 2.4 Kobler EJScreen opp mot husdata
+
+```{r}
+#| label: house-id
+lucas_house <- lucas_house |>
+  mutate(house_id = row_number())
+```
+
+```{r}
+#| label: ej-intersect
+lucas_ej <- st_intersection(lucas_house, lc_ejscreen_map)
+
+nrow(lucas_house) # før
+nrow(lucas_ej)    # etter
+
+# Hus som ligger på grensen mellom to blokker havner to ganger
+sum(duplicated(lucas_ej$house_id))
+
+# Hus som falt ut (f.eks. fordi de ligger i et område som ble klassifisert som vann)
+lucas_house |>
+  filter(!house_id %in% lucas_ej$house_id) |>
+  nrow()
 ```
 
