@@ -497,5 +497,76 @@ Modellene sammenlignes ved hjelp av blant annet justert R², AIC og koeffisiente
 
 Et viktig poeng fra Maslianskaia-Pautrel og Baumont (2016) er at boligpriser og miljøforhold kan være romlig avhengige. De tre OLS-modellene gir derfor et grunnlag for videre undersøkelser av romlig autokorrelasjon og eventuelle romlige regresjonsmodeller senere i oppgaven.
 
-Det må også tas hensyn til at ACS5- og EJScreen-dataene er samlet inn etter perioden for boligtransaksjonene. Disse variablene benyttes derfor som indikatorer på relativt stabile nabolagsforhold, og resultatene bør tolkes som statistiske sammenhenger fremfor sikre årsakssammenhenger.
+```{r}
+library(lmtest)
+library(sandwich)
+
+bptest(modell1)
+bptest(modell2)
+bptest(modell3)
+```
+
+## Regresjondmodell
+
+```{r}
+library(modelsummary)
+library(gt)
+
+modelsummary(
+  list(
+    "Modell 1" = modell1,
+    "Modell 2" = modell2,
+    "Modell 3" = modell3
+  ),
+  vcov = list(
+    vcovHC(modell1, type = "HC3"),
+    vcovHC(modell2, type = "HC3"),
+    vcovHC(modell3, type = "HC3")
+  ),
+  statistic = "statistic",
+  stars = TRUE,
+  gof_map = c(
+    "nobs",
+    "r.squared",
+    "adj.r.squared",
+    "aic",
+    "bic"
+  ),
+  output = "gt"
+)
+```
+
+## Diskusjon av resultat fra regresjonsmodell 
+
+### Modell 1
+
+Modellen har en forklaringskraft på 38,8 %, noe som innebærer at variablene forklarer omtrent 38,8 % av variasjonen i logaritmisk boligpris.
+
+Koeffisienten til log(TLA) er 1,273 og statistisk signifikant på 0,1 %-nivå. Ettersom både boligpris og boligareal er logaritmert, kan koeffisienten tolkes som en elastisitet. En økning i boligarealet på 1 % er dermed forbundet med omtrent 1,27 % høyere boligpris, når salgstidspunktet holdes konstant.
+
+Resultatet er i tråd med hedonisk pristeori, hvor boligens fysiske egenskaper forventes å ha betydning for markedsverdien. Samtidig viser den relativt lave forklaringskraften at boligareal og tidsdummyer alene ikke er tilstrekkelig til å forklare variasjonen i boligprisene.
+
+### Model 2
+
+I modell 2 inkluderes avstand til sentrum og sosioøkonomiske variabler fra ACS5 og EJScreen. Forklaringskraften øker betydelig, fra 38,8 % til 72,6 %. Dette tyder på at geografiske og sosioøkonomiske forhold bidrar vesentlig til å forklare boligprisforskjellene.
+
+Koeffisienten til log(TLA) reduseres fra 1,273 til 0,801, men er fortsatt statistisk signifikant. Dette indikerer at noe av sammenhengen mellom boligareal og boligpris i den første modellen også kan være knyttet til beliggenhet og nabolagsforhold.
+
+Avstand til sentrum (dist_CBD) har en positiv og signifikant koeffisient på 0,013. Dette innebærer at boliger lenger unna sentrum i gjennomsnitt har høyere priser, når de øvrige variablene holdes konstante. En mulig forklaring er at boligområder utenfor sentrum kan ha kvaliteter som verdsettes høyt i boligmarkedet.
+
+Inntektsnivå har en positiv sammenheng med boligpris, mens arbeidsledighet, lavinntektsandel og andelen med lav utdanning har negative og statistisk signifikante sammenhenger. Dette understreker betydningen av sosioøkonomiske forskjeller mellom boligområder.
+
+Resultatene støtter dermed den generelle tilnærmingen hos Maslianskaia-Pautrel og Baumont (2016), hvor boligens verdi ikke bare bestemmes av dens fysiske egenskaper, men også av forhold ved området den ligger i.
+
+### Modell 3
+
+I modell 3 inkluderes miljøvariablene PRE1960PCT, PTRAF, PNPL og PM25. Forklaringskraften øker videre fra 72,6 % til 74,7 %, samtidig som AIC reduseres fra 25 556,9 til 23 547,7. Dette indikerer at den tredje modellen gir bedre tilpasning til datamaterialet.
+
+Andelen eldre boliger (PRE1960PCT) har en negativ og statistisk signifikant koeffisient på -0,365. Dette kan tyde på at områder med en høyere andel eldre boligmasse har lavere boligpriser, når øvrige forhold holdes konstante.
+
+Trafikkvariabelen (PTRAF) har også en negativ og signifikant koeffisient, noe som er forenlig med forventningen om at trafikkbelastning kan redusere attraktiviteten til et boligområde.
+
+Samtidig har både PNPL og PM25 positive og statistisk signifikante koeffisienter. Dette er ikke nødvendigvis i tråd med forventningen om at høyere miljøbelastning skal være forbundet med lavere boligpriser. Resultatene kan skyldes sammenhenger mellom miljøbelastning og andre geografiske eller økonomiske forhold som ikke fullt ut fanges opp av modellen.
+
+Maslianskaia-Pautrel og Baumont (2016) understreker at miljøeffekter kan ha en romlig dimensjon, og at påvirkningen på boligpriser ikke nødvendigvis begrenser seg til den enkelte eiendommen. Dette er relevant for våre resultater, ettersom miljøvariablene kan være geografisk konsentrerte og korrelert med andre nabolagskarakteristika.
 
