@@ -388,3 +388,114 @@ De to blandede kategoriene er mindre, men interessante. Store boliger i billige 
 
 ![Bivariat LISA-klyngekart for boligareal (TLA) og salgspris, k = 10.](Data/lucas_county_price_LISA2.png){#fig-bilisa}
 
+#Oppgave 5
+
+## Lager datasett uten geometridata
+
+```{r}
+# Fjerner geometrien og lager logaritmen av boligprisen
+boligdata <- lucas_full |>
+  st_drop_geometry() |>
+  mutate(
+    year_month = factor(year_month),
+    log_price = log(price)
+  ) |>
+  filter(
+    is.finite(log_price),
+    TLA > 0
+  )
+
+# Kontroller datasettet
+summary(boligdata)
+```
+
+## Hedonistiske modeller
+
+For å undersøke hvilke faktorer som påvirker boligprisene i Lucas County, estimeres tre hedoniske boligprismodeller med et gradvis utvidet sett av forklaringsvariabler. Modellvalgene tar utgangspunkt i Maslianskaia-Pautrel og Baumont (2016), som undersøker hvordan boligpriser påvirkes av boligens egenskaper, geografisk beliggenhet og miljørelaterte forhold. Forfatterne bygger på hedonisk pristeori, hvor boligprisen betraktes som et resultat av flere ulike egenskaper ved boligen og dens omgivelser.
+
+### Modell 1
+
+Den første modellen fungerer som en grunnmodell og inkluderer boligens egne karakteristika, samt tidsdummyer for år og måned. Boligareal (TLA) er en sentral forklaringsvariabel, ettersom større boliger normalt forventes å ha høyere salgspris. Andre relevante boligkarakteristika bør også inkluderes for å kontrollere for forskjeller i boligenes fysiske egenskaper.
+
+Dette er i tråd med Maslianskaia-Pautrel og Baumont (2016, s. 923–924), som beskriver boligprisen som en funksjon av både boligegenskaper og forhold knyttet til beliggenheten. Ved å starte med boligkarakteristika kan vi undersøke hvor mye av prisvariasjonen som kan forklares av selve boligen, før vi inkluderer forhold ved området den ligger i.
+
+Tidsdummyene inkluderes for å kontrollere for mulige endringer i det generelle boligprisnivået gjennom perioden 1993–1998. Dette gjør det mulig å skille mellom prisforskjeller som skyldes boligens egenskaper og prisforskjeller knyttet til tidspunktet for salget.
+
+```{r}
+# Modell 1: Boligkarakteristika og tidsdummyer
+modell1 <- lm(
+  log_price ~ log(TLA) + year_month,
+  data = boligdata
+)
+```
+
+### Modell 2
+
+Den andre modellen utvider grunnmodellen med avstand til sentrum (dist_CBD) og demografiske og sosioøkonomiske variabler fra ACS5 og EJScreen. Dette inkluderer blant annet inntektsnivå, arbeidsledighet, befolkningssammensetning og gjennomsnittlig reisetid til arbeid.
+
+Maslianskaia-Pautrel og Baumont (2016, s. 924) understreker at boligens beliggenhet og tilgjengelighet til ulike områder og fasiliteter kan ha betydning for boligverdien. På bakgrunn av dette inkluderes avstanden til Toledos sentrum som et mål på geografisk tilgjengelighet. Avstand til sentrum kan påvirke boligprisene gjennom blant annet transportkostnader og nærhet til arbeidsplasser og tjenester. Sammenhengen trenger imidlertid ikke å være negativ, ettersom boligene i forstedene også kan være større eller ligge i mer attraktive boligområder.
+
+De sosioøkonomiske variablene inkluderes for å kontrollere for forskjeller mellom nabolagene. Inntektsnivå og arbeidsledighet kan eksempelvis gjenspeile lokale økonomiske forhold, mens befolkningssammensetningen kan fange opp forskjeller mellom boligområder som ikke forklares av boligens fysiske egenskaper alene. Disse variablene bør tolkes som indikatorer på nabolagsforhold, og ikke nødvendigvis som direkte årsaker til boligprisforskjeller.
+
+Formålet med modell 2 er dermed å undersøke om områdeforhold bidrar til å forklare boligprisene utover det som allerede forklares av boligkarakteristika og tidspunktet for salget.
+
+```{r}
+# Modell 2: Legger til beliggenhet og sosioøkonomiske variabler
+modell2 <- lm(
+  log_price ~ log(TLA) +
+    year_month +
+    dist_CBD +
+    pc_inntekt +
+    andel_svart +
+    andel_asiatisk +
+    andel_ledige +
+    mwtt +
+    LOWINCPCT +
+    LESSHSPCT,
+  data = boligdata
+)
+```
+
+
+### Modell 3
+
+
+Den tredje modellen utvider modell 2 ved å inkludere miljørelaterte variabler fra EJScreen. Variablene omfatter blant annet trafikkbelastning (PTRAF), nærhet til forurensede områder (PNPL), luftforurensning (PM25) og andelen eldre boliger (PRE1960PCT).
+
+Dette modellvalget er særlig relevant med utgangspunkt i Maslianskaia-Pautrel og Baumont (2016), som undersøker hvordan miljømessige kvaliteter og ulemper påvirker boligpriser. Forfatterne viser til at miljøforhold som trafikkstøy, forurensning og nærhet til industriområder kan inngå i boligkjøpernes vurdering av en eiendom.
+
+Miljøvariablene inkluderes derfor for å undersøke om slike forhold har en selvstendig sammenheng med boligprisene når vi allerede har kontrollert for boligkarakteristika, beliggenhet og sosioøkonomiske forhold. Det kan eksempelvis forventes at høyere miljøbelastning er forbundet med lavere boligpriser, men den faktiske sammenhengen må undersøkes empirisk.
+
+Maslianskaia-Pautrel og Baumont (2016, s. 925–927) fremhever også betydningen av romlige effekter. Miljøforhold kan påvirke flere nærliggende boliger samtidig, og boligprisene kan være påvirket av forhold i omkringliggende områder. Dette innebærer at en vanlig OLS-modell ikke nødvendigvis fanger opp alle geografiske sammenhenger.
+
+```{r}
+# Modell 3: Legger til miljøvariabler
+modell3 <- lm(
+  log_price ~ log(TLA) +
+    year_month +
+    dist_CBD +
+    pc_inntekt +
+    andel_svart +
+    andel_asiatisk +
+    andel_ledige +
+    mwtt +
+    LOWINCPCT +
+    LESSHSPCT +
+    PRE1960PCT +
+    PTRAF +
+    PNPL +
+    PM25,
+  data = boligdata
+)
+```
+
+## Vurdering av modellene
+
+Ved å estimere tre modeller med gradvis flere forklaringsvariabler kan vi undersøke hvordan sammenhengen mellom boligpris og de ulike egenskapene endres når flere forhold kontrolleres for. Modell 1 gir et utgangspunkt basert på boligkarakteristika, modell 2 inkluderer geografiske og sosioøkonomiske forhold, mens modell 3 også undersøker betydningen av miljøbelastning.
+
+Modellene sammenlignes ved hjelp av blant annet justert R², AIC og koeffisientenes statistiske signifikans. En forbedring i modelltilpasningen ved inkludering av flere variabler kan indikere at disse bidrar til å forklare variasjonen i boligprisene. Samtidig må modellvalget vurderes ut fra økonomisk teori og risikoen for multikollinearitet.
+
+Et viktig poeng fra Maslianskaia-Pautrel og Baumont (2016) er at boligpriser og miljøforhold kan være romlig avhengige. De tre OLS-modellene gir derfor et grunnlag for videre undersøkelser av romlig autokorrelasjon og eventuelle romlige regresjonsmodeller senere i oppgaven.
+
+Det må også tas hensyn til at ACS5- og EJScreen-dataene er samlet inn etter perioden for boligtransaksjonene. Disse variablene benyttes derfor som indikatorer på relativt stabile nabolagsforhold, og resultatene bør tolkes som statistiske sammenhenger fremfor sikre årsakssammenhenger.
+
