@@ -350,3 +350,44 @@ st_write(
 )
 ```
 
+# Oppgave 4
+
+## Utforskende dataanalyse {#sec-eda}
+
+Før vi estimerer modellene, gjennomfører vi en utforskende romlig dataanalyse (EDA) i GeoDa. Datasettet består av 25 351 boligsalg etter koblingen med EJScreen- og ACS-dataene. Seks av de opprinnelige 25 357 observasjonene falt ut fordi de ikke lå innenfor noen av områdene etter at vann var fjernet fra geometrien.
+
+### Romlig fordeling av prisene
+
+Salgsprisene varierer fra 2 000 til 875 000 dollar, med et gjennomsnitt på om lag 79 000 dollar. Fordelingen er sterkt høyreskjev. De laveste prisene er sannsynligvis ikke vanlige markedssalg.
+
+@fig-kvantil viser prisene fordelt på fem kvantiler. Mønsteret er tydelig: de billigste boligene ligger samlet i og rundt Toledo sentrum, langs Maumee-elven og i de eldre bydelene nær sentrum. De dyreste boligene ligger i forstedene, særlig nordvest mot Sylvania, sørvest langs elven mot Maumee og Perrysburg og i de mer spredtbygde områdene vest i fylket. Det finnes også en klynge av dyre boliger øst for elven.
+
+Prisene ser dermed ut til å øke med avstanden fra sentrum. Sammenhengen er likevel ikke nødvendigvis lineær: prisene er lave nær sentrum, stiger utover i forstedene og varierer mer i de ytterste, landlige områdene. Dette er i tråd med den klassiske monosentriske bymodellen, men mønsteret kan også gjenspeile at eldre og mindre boliger ligger nær sentrum. Det er derfor viktig å kontrollere for boligkarakteristika når vi estimerer effekten av avstand til CBD.
+
+![Salgspris for boliger i Lucas County, 1993–1998, fordelt på kvantiler.](Data/lucas_county_price_qnt.png){#fig-kvantil}
+
+### Bivariat romlig autokorrelasjon mellom boligareal og pris
+
+For å undersøke hvordan boligens størrelse henger sammen med prisnivået i nabolaget, bruker vi bivariat Moran's I med boligareal (`TLA`) som første variabel og salgspris (`price`) som andre. Den bivariate statistikken måler sammenhengen mellom verdien av `TLA` i et punkt og gjennomsnittet av `price` hos naboene, slik de er definert i vektmatrisen. Vi bruker k-nærmeste-nabo-vekter med henholdsvis k = 3 og k = 10.
+
+@fig-moran viser Moran-plottene. Begge variablene er standardisert. Den bivariate Moran's I er 0,646 med tre naboer (@fig-moran-k3) og 0,619 med ti naboer (@fig-moran-k10). Det er en sterk positiv sammenheng: store boliger ligger typisk i nabolag med høye priser, og små boliger i nabolag med lave priser. De fleste observasjonene ligger i kvadrantene for høy-høy og lav-lav. En mindre andel ligger i de to andre kvadrantene, altså små boliger i dyre nabolag og store boliger i billige nabolag. Plottene viser også at begge variablene er høyreskjeve, med enkelte svært store boliger og enkelte nabolag med svært høye priser.
+
+At statistikken er noe lavere med ti naboer, er som forventet. Når gjennomsnittet beregnes over flere naboer, jevnes ekstreme verdier ut, og variasjonen i den laggede prisen blir mindre. Resultatet er likevel robust for valget av k.
+
+::: {#fig-moran layout-ncol=2}
+![k = 3](Data/lucas_county_BivMoransI_TLA_Price_k3.png){#fig-moran-k3}
+
+![k = 10](Data/lucas_county_BivMoransI_TLA_Price_k10.png){#fig-moran-k10}
+
+Bivariat Moran-plott for boligareal (TLA) og laggede salgspriser. Begge variablene er standardisert.
+:::
+
+@fig-bilisa viser hvor de signifikante klyngene ligger. Klynger av store og dyre boliger (høy-høy, 4 440 observasjoner) finner vi i forstedene: nordvest mot Sylvania, sørvest langs elven mot Maumee, i de spredtbygde områdene i vest rundt Whitehouse og i en klynge øst for elven. Små og billige boliger (lav-lav, 6 928 observasjoner) er konsentrert i Toledo sentrum og i bydelene nord og vest for sentrum. Dette er den største gruppen.
+
+De to blandede kategoriene er mindre, men interessante. Store boliger i billige nabolag (høy-lav, 1 295 observasjoner) ligger spredt inne i lav-lav-områdene nær sentrum og på østsiden av elven. Dette er trolig eldre, store boliger i sentrumsnære bydeler der det generelle prisnivået er lavt. Små boliger i dyre nabolag (lav-høy, 568 observasjoner) ligger spredt i kantene av høy-høy-klyngene i forstedene. Om lag halvparten av observasjonene (12 120) inngår ikke i noen signifikant klynge.
+
+![Bivariat LISA-klyngekart for boligareal (TLA) og salgspris, k = 10.](Data/lucas_county_price_LISA2.png){#fig-bilisa}
+
+### Implikasjoner for modelleringen
+
+EDA-en gir tre innspill til de hedoniske modellene. For det første er prisene sterkt romlig klynget, noe som tyder på at OLS-residualene vil være romlig autokorrelerte dersom vi ikke fanger opp nabolagseffektene. Dette motiverer de romlige regresjonsmodellene i @sec-spatial. For det andre ser sammenhengen mellom pris og avstand til sentrum ut til å være ikke-lineær, og vi tester derfor ulike funksjonsformer for `dist_CBD`. For det tredje er både pris og boligareal høyreskjeve, noe vi tar hensyn til når vi velger funksjonsform.
