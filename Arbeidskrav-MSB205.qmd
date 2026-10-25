@@ -388,6 +388,3 @@ De to blandede kategoriene er mindre, men interessante. Store boliger i billige 
 
 ![Bivariat LISA-klyngekart for boligareal (TLA) og salgspris, k = 10.](Data/lucas_county_price_LISA2.png){#fig-bilisa}
 
-### Implikasjoner for modelleringen
-
-EDA-en gir tre innspill til de hedoniske modellene. For det første er prisene sterkt romlig klynget, noe som tyder på at OLS-residualene vil være romlig autokorrelerte dersom vi ikke fanger opp nabolagseffektene. Dette motiverer de romlige regresjonsmodellene i @sec-spatial. For det andre ser sammenhengen mellom pris og avstand til sentrum ut til å være ikke-lineær, og vi tester derfor ulike funksjonsformer for `dist_CBD`. For det tredje er både pris og boligareal høyreskjeve, noe vi tar hensyn til når vi velger funksjonsform.
