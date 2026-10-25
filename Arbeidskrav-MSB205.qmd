@@ -570,3 +570,32 @@ Samtidig har både PNPL og PM25 positive og statistisk signifikante koeffisiente
 
 Maslianskaia-Pautrel og Baumont (2016) understreker at miljøeffekter kan ha en romlig dimensjon, og at påvirkningen på boligpriser ikke nødvendigvis begrenser seg til den enkelte eiendommen. Dette er relevant for våre resultater, ettersom miljøvariablene kan være geografisk konsentrerte og korrelert med andre nabolagskarakteristika.
 
+# Oppgave 6
+
+```{r}
+# Finn alle tidsdummyene
+tidsvariabler <- grep(
+  "^year_month",
+  names(coef(modell3)),
+  value = TRUE
+)
+
+# Beregn HC3-robust kovariansmatrise
+robust_vcov <- vcovHC(
+  modell3,
+  type = "HC3"
+)
+
+# Gjennomfør simultan F-test
+tidstest <- linearHypothesis(
+  modell3,
+  hypothesis.matrix = tidsvariabler,
+  rhs = 0,
+  vcov. = robust_vcov,
+  test = "F"
+)
+
+# Vis resultatet
+tidstest
+```
+
