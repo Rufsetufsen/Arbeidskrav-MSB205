@@ -595,7 +595,21 @@ tidstest <- linearHypothesis(
   test = "F"
 )
 
-# Vis resultatet
-tidstest
+
+# Vis resultatet fra F-testen
+tidstest[c("Res.Df", "Df", "F", "Pr(>F)")]
 ```
 
+## Tolkning av tekst
+
+For å undersøke om tidsdummyene samlet sett har betydning for boligprisene, gjennomføres en simultan F-test ved hjelp av funksjonen linearHypothesis() fra R-pakken car. Testen utføres på modell 3, som inkluderer boligkarakteristika, beliggenhet, sosioøkonomiske forhold og miljøvariabler.
+
+Nullhypotesen (H₀) er at alle koeffisientene til tidsdummyene er lik null, mens alternativhypotesen (H₁) er at minst én av koeffisientene er forskjellig fra null.
+
+Testen gjennomføres med HC3-robust kovariansestimering for å ta hensyn til mulig heteroskedastisitet.
+
+Resultatet gir en F-verdi på 14,052 med 69 og 25 268 frihetsgrader, og en p-verdi under 2,2 × 10⁻¹⁶. Nullhypotesen forkastes dermed på 5 %-signifikansnivå.
+
+Dette innebærer at tidsdummyene samlet sett er statistisk signifikante, og at salgstidspunktet bidrar til å forklare variasjonen i boligprisene i Lucas County i perioden 1993–1998, også når vi kontrollerer for boligens størrelse, beliggenhet, sosioøkonomiske forhold og miljøvariabler.
+
+Resultatet understreker viktigheten av å inkludere tidsdummyer i de hedoniske boligprismodellene. Uten disse variablene risikerer vi at endringer i det generelle boligprisnivået over tid påvirker de estimerte sammenhengene mellom boligpris og de øvrige forklaringsvariablene.
