@@ -4,7 +4,7 @@ authors:
   - Harald Bjarne Vika
   - Irjan A. Vikre
   - Kristoffer Tufta
-abstract: "Her vil vi esitmere hedoniske og romlige regresjonsmodeller for boligsalg I Lucas County, Ohio, og hvilke modell som ganger effektene opp best"
+abstract: "Her vil vi esitmere hedoniske og romlige regresjonsmodeller for boligsalg I Lucas County, Ohio, og hvilke modell som viser effektene best"
 number-sections: true
 number-depth: 3
 lang: nb-NO
@@ -1100,13 +1100,15 @@ Tidsdummyene holdes utenfor, siden det ikke gir mening å tolke en spillover fra
 
 SDEM-modellen nester tre enklere modeller, som vist i @tbl-nesting.
 
+::: {#tbl-nesting}
 | Restriksjon | Modell |
 |----|----|
 | $\theta = 0$ | SEM: $y = X\beta + u, \ u = \lambda W u + \varepsilon$ |
 | $\lambda = 0$ | SLX: $y = X\beta + WX\theta + \varepsilon$ |
 | $\theta = 0$ og $\lambda = 0$ | OLS: $y = X\beta + \varepsilon$ |
 
-: Modeller som er nestet i SDEM.
+Modeller som er nestet i SDEM.
+:::
 
 SLX-modellen (spatial lag of X) inneholder bare lokale spillovers gjennom $WX$, og kan estimeres med OLS.
 SEM-modellen har bare romlig avhengighet i feilleddet.
@@ -1453,6 +1455,7 @@ Vi ser nærmere på to variabler: boligareal (`log_TLA`) og andelen svarte i cen
 @tbl-diskusjon oppsummerer estimatene fra de ulike modellene med k = 10.
 For SAR, SLX og SDEM viser tabellen impactene, siden det er disse som gir den implisitte prisen.
 
+::: {#tbl-diskusjon}
 | Modell | Effekt      | Boligareal (log) | Andel svarte   |
 |--------|-------------|------------------|----------------|
 | OLS    | Koeffisient | 0,628 (56,5)     | −0,658 (−51,3) |
@@ -1467,7 +1470,10 @@ For SAR, SLX og SDEM viser tabellen impactene, siden det er disse som gir den im
 |        | Indirekte   | 0,129 (6,3)      | −0,869 (−8,8)  |
 |        | Total       | 0,679 (29,2)     | −0,755 (−22,8) |
 
-: Estimerte effekter av boligareal og andel svarte i de ulike modellene (k = 10). t- eller z-verdier i parentes. Alle effektene i SAR-modellen er signifikante på 0,1 %-nivå.
+Estimerte effekter av boligareal og andel svarte i de ulike modellene (k = 10).
+t- eller z-verdier i parentes.
+Alle effektene i SAR-modellen er signifikante på 0,1 %-nivå.
+:::
 
 **I OLS- og SEM-modellene** tolkes koeffisientene direkte.
 Boligareal inngår logaritmert, så koeffisienten er en elastisitet: i OLS-modellen gir 1 % større boligareal 0,63 % høyere pris, alt annet likt.
