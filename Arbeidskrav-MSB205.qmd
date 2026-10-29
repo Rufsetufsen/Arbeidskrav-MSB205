@@ -1,3 +1,50 @@
+---
+title: "....kom på noe...."
+authors: 
+  - Harald Bjarne Vika
+  - Irjan A. Vikre
+  - Kristoffer Tufta
+abstract: "Her vil vi esitmere hedoniske og romlige regresjonsmodeller for boligsalg I Lucas County, Ohio, og hvilke modell som ganger effektene opp best"
+number-sections: true
+number-depth: 3
+lang: nb-NO
+csl: apa7.csl
+crossref:
+  lof-title: "Figurliste"
+  lot-title: "Tabelliste"
+format:
+  html: default
+  typst:
+    papersize: a4
+    toc: true
+    toc-title: Innholdsfortegnelse
+    documentclass: article
+    number-sections: true
+    keep-tex: true
+    fig-pos: "H"
+    output-file: "Arbeidskrav_HIK"
+    citeproc: true
+  pdf:
+    documentclass: article
+    toc:  true
+    toc-title: Innholdsfortegnelse
+    number-sections: true
+    keep-tex: true
+    papersize: A4
+    fig-pos: "H"
+    output-file: "Arbeidskrav_HIK"
+editor_options:
+  markdown:
+    #wrap: 72
+    canonical: true
+    chunk_output_type: console
+echo: false
+eval: true
+warning: false
+bibliography: references.bib
+nocite: '@*'
+---
+
 ```{r}
 #| label: setup
 #| message: false
@@ -27,9 +74,10 @@ options(tigris_use_cache = TRUE)
 ```{r}
 lc_ejscreen_map <- read_sf("./Data/EJ_Screen_2015_LucasCountyOH.gpkg")
 ```
+
 # Oppgave 1
 
-## 1.1 Laster inn og konverterer til SF 
+## 1.1 Laster inn og konverterer til SF
 
 ```{r}
 #| label: house-load
@@ -64,6 +112,7 @@ range(lucas_house$sale_date)
 nlevels(lucas_house$year_month)
 table(lucas_house$year_month)
 ```
+
 ## 1.3 CBD og Avstand
 
 ```{r}
@@ -80,9 +129,11 @@ lucas_house <- lucas_house |>
 
 summary(lucas_house$dist_CBD)
 ```
+
 # Oppgave 2
 
 ## 2.1 Leser inn variabler
+
 ```{r}
 #| label: ej-read
 lc_ejscreen_map <- read_sf(here("Data", "EJ_Screen_2015_LucasCountyOH.gpkg"))
@@ -133,6 +184,7 @@ nrow(lc_ejscreen_map) # skal være 397
 ```
 
 ## 2.3 Fjerner vann
+
 ```{r}
 #| label: ej-water
 lc_ejscreen_map <- lc_ejscreen_map |>
@@ -206,7 +258,7 @@ acs5_income <- hent_acs("B19301", geometry = TRUE) |>
 nrow(acs5_income) # 128 (inkludert tract 9900)
 ```
 
-## Etnisitet 
+## Etnisitet
 
 ```{r}
 #| label: acs-race
@@ -242,6 +294,7 @@ head(acs5_mwtt, 5) # 39095000200 skal gi 22.22452
 ```
 
 ## Medianinntekt pr. Hushold
+
 ```{r}
 #| label: acs-median-income
 acs5_hh_income <- hent_acs("B19013") |>
@@ -249,6 +302,7 @@ acs5_hh_income <- hent_acs("B19013") |>
 ```
 
 ## Arbeidsstatus
+
 ```{r}
 #| label: acs-employment
 # B23025_003 = sivil arbeidsstyrke, B23025_005 = arbeidsledige
@@ -261,6 +315,7 @@ acs5_employment <- hent_acs("B23025") |>
 ```
 
 ## Fattigdom
+
 ```{r}
 #| label: acs-poverty
 # _002 og _003: under 1.00, _004 til _007: 1.00-1.99, _008: 2.00 og over
@@ -297,6 +352,7 @@ nrow(census_full) # skal være 127
 ```
 
 ## Projeksjon og vann
+
 ```{r}
 #| label: census-water
 census_full <- census_full |>
@@ -354,37 +410,65 @@ st_write(
 
 ## Utforskende dataanalyse {#sec-eda}
 
-Før vi estimerer modellene, gjennomfører vi en utforskende romlig dataanalyse (EDA) i GeoDa. Datasettet består av 25 351 boligsalg etter koblingen med EJScreen- og ACS-dataene. Seks av de opprinnelige 25 357 observasjonene falt ut fordi de ikke lå innenfor noen av områdene etter at vann var fjernet fra geometrien.
+Før vi estimerer modellene, gjennomfører vi en utforskende romlig dataanalyse (EDA) i GeoDa.
+Datasettet består av 25 351 boligsalg etter koblingen med EJScreen- og ACS-dataene.
+Seks av de opprinnelige 25 357 observasjonene falt ut fordi de ikke lå innenfor noen av områdene etter at vann var fjernet fra geometrien.
 
 ### Romlig fordeling av prisene
 
-Salgsprisene varierer fra 2 000 til 875 000 dollar, med et gjennomsnitt på om lag 79 000 dollar. Fordelingen er sterkt høyreskjev. De laveste prisene er sannsynligvis ikke vanlige markedssalg.
+Salgsprisene varierer fra 2 000 til 875 000 dollar, med et gjennomsnitt på om lag 79 000 dollar.
+Fordelingen er sterkt høyreskjev.
+De laveste prisene er sannsynligvis ikke vanlige markedssalg.
 
-@fig-kvantil viser prisene fordelt på fem kvantiler. Mønsteret er tydelig: de billigste boligene ligger samlet i og rundt Toledo sentrum, langs Maumee-elven og i de eldre bydelene nær sentrum. De dyreste boligene ligger i forstedene, særlig nordvest mot Sylvania, sørvest langs elven mot Maumee og Perrysburg og i de mer spredtbygde områdene vest i fylket. Det finnes også en klynge av dyre boliger øst for elven.
+@fig-kvantil viser prisene fordelt på fem kvantiler.
+Mønsteret er tydelig: de billigste boligene ligger samlet i og rundt Toledo sentrum, langs Maumee-elven og i de eldre bydelene nær sentrum.
+De dyreste boligene ligger i forstedene, særlig nordvest mot Sylvania, sørvest langs elven mot Maumee og Perrysburg og i de mer spredtbygde områdene vest i fylket.
+Det finnes også en klynge av dyre boliger øst for elven.
 
-Prisene ser dermed ut til å øke med avstanden fra sentrum. Sammenhengen er likevel ikke nødvendigvis lineær: prisene er lave nær sentrum, stiger utover i forstedene og varierer mer i de ytterste, landlige områdene. Dette er i tråd med den klassiske monosentriske bymodellen, men mønsteret kan også gjenspeile at eldre og mindre boliger ligger nær sentrum. Det er derfor viktig å kontrollere for boligkarakteristika når vi estimerer effekten av avstand til CBD.
+Prisene ser dermed ut til å øke med avstanden fra sentrum.
+Sammenhengen er likevel ikke nødvendigvis lineær: prisene er lave nær sentrum, stiger utover i forstedene og varierer mer i de ytterste, landlige områdene.
+Dette er i tråd med den klassiske monosentriske bymodellen, men mønsteret kan også gjenspeile at eldre og mindre boliger ligger nær sentrum.
+Det er derfor viktig å kontrollere for boligkarakteristika når vi estimerer effekten av avstand til CBD.
 
 ![Salgspris for boliger i Lucas County, 1993–1998, fordelt på kvantiler.](Data/lucas_county_price_qnt.png){#fig-kvantil}
 
 ### Bivariat romlig autokorrelasjon mellom boligareal og pris
 
-For å undersøke hvordan boligens størrelse henger sammen med prisnivået i nabolaget, bruker vi bivariat Moran's I med boligareal (`TLA`) som første variabel og salgspris (`price`) som andre. Den bivariate statistikken måler sammenhengen mellom verdien av `TLA` i et punkt og gjennomsnittet av `price` hos naboene, slik de er definert i vektmatrisen. Vi bruker k-nærmeste-nabo-vekter med henholdsvis k = 3 og k = 10.
+For å undersøke hvordan boligens størrelse henger sammen med prisnivået i nabolaget, bruker vi bivariat Moran's I med boligareal (`TLA`) som første variabel og salgspris (`price`) som andre.
+Den bivariate statistikken måler sammenhengen mellom verdien av `TLA` i et punkt og gjennomsnittet av `price` hos naboene, slik de er definert i vektmatrisen.
+Vi bruker k-nærmeste-nabo-vekter med henholdsvis k = 3 og k = 10.
 
-@fig-moran viser Moran-plottene. Begge variablene er standardisert. Den bivariate Moran's I er 0,646 med tre naboer (@fig-moran-k3) og 0,619 med ti naboer (@fig-moran-k10). Det er en sterk positiv sammenheng: store boliger ligger typisk i nabolag med høye priser, og små boliger i nabolag med lave priser. De fleste observasjonene ligger i kvadrantene for høy-høy og lav-lav. En mindre andel ligger i de to andre kvadrantene, altså små boliger i dyre nabolag og store boliger i billige nabolag. Plottene viser også at begge variablene er høyreskjeve, med enkelte svært store boliger og enkelte nabolag med svært høye priser.
+@fig-moran viser Moran-plottene.
+Begge variablene er standardisert.
+Den bivariate Moran's I er 0,646 med tre naboer (@fig-moran-k3) og 0,619 med ti naboer (@fig-moran-k10).
+Det er en sterk positiv sammenheng: store boliger ligger typisk i nabolag med høye priser, og små boliger i nabolag med lave priser.
+De fleste observasjonene ligger i kvadrantene for høy-høy og lav-lav.
+En mindre andel ligger i de to andre kvadrantene, altså små boliger i dyre nabolag og store boliger i billige nabolag.
+Plottene viser også at begge variablene er høyreskjeve, med enkelte svært store boliger og enkelte nabolag med svært høye priser.
 
-At statistikken er noe lavere med ti naboer, er som forventet. Når gjennomsnittet beregnes over flere naboer, jevnes ekstreme verdier ut, og variasjonen i den laggede prisen blir mindre. Resultatet er likevel robust for valget av k.
+At statistikken er noe lavere med ti naboer, er som forventet.
+Når gjennomsnittet beregnes over flere naboer, jevnes ekstreme verdier ut, og variasjonen i den laggede prisen blir mindre.
+Resultatet er likevel robust for valget av k.
 
-::: {#fig-moran layout-ncol=2}
+::: {#fig-moran layout-ncol="2"}
 ![k = 3](Data/lucas_county_BivMoransI_TLA_Price_k3.png){#fig-moran-k3}
 
 ![k = 10](Data/lucas_county_BivMoransI_TLA_Price_k10.png){#fig-moran-k10}
 
-Bivariat Moran-plott for boligareal (TLA) og laggede salgspriser. Begge variablene er standardisert.
+Bivariat Moran-plott for boligareal (TLA) og laggede salgspriser.
+Begge variablene er standardisert.
 :::
 
-@fig-bilisa viser hvor de signifikante klyngene ligger. Klynger av store og dyre boliger (høy-høy, 4 440 observasjoner) finner vi i forstedene: nordvest mot Sylvania, sørvest langs elven mot Maumee, i de spredtbygde områdene i vest rundt Whitehouse og i en klynge øst for elven. Små og billige boliger (lav-lav, 6 928 observasjoner) er konsentrert i Toledo sentrum og i bydelene nord og vest for sentrum. Dette er den største gruppen.
+@fig-bilisa viser hvor de signifikante klyngene ligger.
+Klynger av store og dyre boliger (høy-høy, 4 440 observasjoner) finner vi i forstedene: nordvest mot Sylvania, sørvest langs elven mot Maumee, i de spredtbygde områdene i vest rundt Whitehouse og i en klynge øst for elven.
+Små og billige boliger (lav-lav, 6 928 observasjoner) er konsentrert i Toledo sentrum og i bydelene nord og vest for sentrum.
+Dette er den største gruppen.
 
-De to blandede kategoriene er mindre, men interessante. Store boliger i billige nabolag (høy-lav, 1 295 observasjoner) ligger spredt inne i lav-lav-områdene nær sentrum og på østsiden av elven. Dette er trolig eldre, store boliger i sentrumsnære bydeler der det generelle prisnivået er lavt. Små boliger i dyre nabolag (lav-høy, 568 observasjoner) ligger spredt i kantene av høy-høy-klyngene i forstedene. Om lag halvparten av observasjonene (12 120) inngår ikke i noen signifikant klynge.
+De to blandede kategoriene er mindre, men interessante.
+Store boliger i billige nabolag (høy-lav, 1 295 observasjoner) ligger spredt inne i lav-lav-områdene nær sentrum og på østsiden av elven.
+Dette er trolig eldre, store boliger i sentrumsnære bydeler der det generelle prisnivået er lavt.
+Små boliger i dyre nabolag (lav-høy, 568 observasjoner) ligger spredt i kantene av høy-høy-klyngene i forstedene.
+Om lag halvparten av observasjonene (12 120) inngår ikke i noen signifikant klynge.
 
 ![Bivariat LISA-klyngekart for boligareal (TLA) og salgspris, k = 10.](Data/lucas_county_price_LISA2.png){#fig-bilisa}
 
@@ -411,15 +495,21 @@ summary(boligdata)
 
 ## Hedonistiske modeller
 
-For å undersøke hvilke faktorer som påvirker boligprisene i Lucas County, estimeres tre hedoniske boligprismodeller med et gradvis utvidet sett av forklaringsvariabler. Modellvalgene tar utgangspunkt i Maslianskaia-Pautrel og Baumont (2016), som undersøker hvordan boligpriser påvirkes av boligens egenskaper, geografisk beliggenhet og miljørelaterte forhold. Forfatterne bygger på hedonisk pristeori, hvor boligprisen betraktes som et resultat av flere ulike egenskaper ved boligen og dens omgivelser.
+For å undersøke hvilke faktorer som påvirker boligprisene i Lucas County, estimeres tre hedoniske boligprismodeller med et gradvis utvidet sett av forklaringsvariabler.
+Modellvalgene tar utgangspunkt i @maslianskaia-pautrelEnvironmentalSpilloversTheir2016, som undersøker hvordan boligpriser påvirkes av boligens egenskaper, geografisk beliggenhet og miljørelaterte forhold.
+Forfatterne bygger på hedonisk pristeori, hvor boligprisen betraktes som et resultat av flere ulike egenskaper ved boligen og dens omgivelser.
 
 ### Modell 1
 
-Den første modellen fungerer som en grunnmodell og inkluderer boligens egne karakteristika, samt tidsdummyer for år og måned. Boligareal (TLA) er en sentral forklaringsvariabel, ettersom større boliger normalt forventes å ha høyere salgspris. Andre relevante boligkarakteristika bør også inkluderes for å kontrollere for forskjeller i boligenes fysiske egenskaper.
+Den første modellen fungerer som en grunnmodell og inkluderer boligens egne karakteristika, samt tidsdummyer for år og måned.
+Boligareal (TLA) er en sentral forklaringsvariabel, ettersom større boliger normalt forventes å ha høyere salgspris.
+Andre relevante boligkarakteristika bør også inkluderes for å kontrollere for forskjeller i boligenes fysiske egenskaper.
 
-Dette er i tråd med Maslianskaia-Pautrel og Baumont (2016, s. 923–924), som beskriver boligprisen som en funksjon av både boligegenskaper og forhold knyttet til beliggenheten. Ved å starte med boligkarakteristika kan vi undersøke hvor mye av prisvariasjonen som kan forklares av selve boligen, før vi inkluderer forhold ved området den ligger i.
+Dette er i tråd med @maslianskaia-pautrelEnvironmentalSpilloversTheir2016, som beskriver boligprisen som en funksjon av både boligegenskaper og forhold knyttet til beliggenheten.
+Ved å starte med boligkarakteristika kan vi undersøke hvor mye av prisvariasjonen som kan forklares av selve boligen, før vi inkluderer forhold ved området den ligger i [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 923-924].
 
-Tidsdummyene inkluderes for å kontrollere for mulige endringer i det generelle boligprisnivået gjennom perioden 1993–1998. Dette gjør det mulig å skille mellom prisforskjeller som skyldes boligens egenskaper og prisforskjeller knyttet til tidspunktet for salget.
+Tidsdummyene inkluderes for å kontrollere for mulige endringer i det generelle boligprisnivået gjennom perioden 1993–1998.
+Dette gjør det mulig å skille mellom prisforskjeller som skyldes boligens egenskaper og prisforskjeller knyttet til tidspunktet for salget.
 
 ```{r}
 # Modell 1: Boligkarakteristika og tidsdummyer
@@ -431,11 +521,17 @@ modell1 <- lm(
 
 ### Modell 2
 
-Den andre modellen utvider grunnmodellen med avstand til sentrum (dist_CBD) og demografiske og sosioøkonomiske variabler fra ACS5 og EJScreen. Dette inkluderer blant annet inntektsnivå, arbeidsledighet, befolkningssammensetning og gjennomsnittlig reisetid til arbeid.
+Den andre modellen utvider grunnmodellen med avstand til sentrum (dist_CBD) og demografiske og sosioøkonomiske variabler fra ACS5 og EJScreen.
+Dette inkluderer blant annet inntektsnivå, arbeidsledighet, befolkningssammensetning og gjennomsnittlig reisetid til arbeid.
 
-Maslianskaia-Pautrel og Baumont (2016, s. 924) understreker at boligens beliggenhet og tilgjengelighet til ulike områder og fasiliteter kan ha betydning for boligverdien. På bakgrunn av dette inkluderes avstanden til Toledos sentrum som et mål på geografisk tilgjengelighet. Avstand til sentrum kan påvirke boligprisene gjennom blant annet transportkostnader og nærhet til arbeidsplasser og tjenester. Sammenhengen trenger imidlertid ikke å være negativ, ettersom boligene i forstedene også kan være større eller ligge i mer attraktive boligområder.
+@maslianskaia-pautrelEnvironmentalSpilloversTheir2016 understreker at boligens beliggenhet og tilgjengelighet til ulike områder og fasiliteter kan ha betydning for boligverdien.
+På bakgrunn av dette inkluderes avstanden til Toledos sentrum som et mål på geografisk tilgjengelighet.
+Avstand til sentrum kan påvirke boligprisene gjennom blant annet transportkostnader og nærhet til arbeidsplasser og tjenester.
+Sammenhengen trenger imidlertid ikke å være negativ, ettersom boligene i forstedene også kan være større eller ligge i mer attraktive boligområder [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 924].
 
-De sosioøkonomiske variablene inkluderes for å kontrollere for forskjeller mellom nabolagene. Inntektsnivå og arbeidsledighet kan eksempelvis gjenspeile lokale økonomiske forhold, mens befolkningssammensetningen kan fange opp forskjeller mellom boligområder som ikke forklares av boligens fysiske egenskaper alene. Disse variablene bør tolkes som indikatorer på nabolagsforhold, og ikke nødvendigvis som direkte årsaker til boligprisforskjeller.
+De sosioøkonomiske variablene inkluderes for å kontrollere for forskjeller mellom nabolagene.
+Inntektsnivå og arbeidsledighet kan eksempelvis gjenspeile lokale økonomiske forhold, mens befolkningssammensetningen kan fange opp forskjeller mellom boligområder som ikke forklares av boligens fysiske egenskaper alene.
+Disse variablene bør tolkes som indikatorer på nabolagsforhold, og ikke nødvendigvis som direkte årsaker til boligprisforskjeller.
 
 Formålet med modell 2 er dermed å undersøke om områdeforhold bidrar til å forklare boligprisene utover det som allerede forklares av boligkarakteristika og tidspunktet for salget.
 
@@ -456,17 +552,20 @@ modell2 <- lm(
 )
 ```
 
-
 ### Modell 3
 
+Den tredje modellen utvider modell 2 ved å inkludere miljørelaterte variabler fra EJScreen.
+Variablene omfatter blant annet trafikkbelastning (PTRAF), nærhet til forurensede områder (PNPL), luftforurensning (PM25) og andelen eldre boliger (PRE1960PCT).
 
-Den tredje modellen utvider modell 2 ved å inkludere miljørelaterte variabler fra EJScreen. Variablene omfatter blant annet trafikkbelastning (PTRAF), nærhet til forurensede områder (PNPL), luftforurensning (PM25) og andelen eldre boliger (PRE1960PCT).
+Dette modellvalget er særlig relevant med utgangspunkt i @maslianskaia-pautrelEnvironmentalSpilloversTheir2016, som undersøker hvordan miljømessige kvaliteter og ulemper påvirker boligpriser.
+Forfatterne viser til at miljøforhold som trafikkstøy, forurensning og nærhet til industriområder kan inngå i boligkjøpernes vurdering av en eiendom.
 
-Dette modellvalget er særlig relevant med utgangspunkt i Maslianskaia-Pautrel og Baumont (2016), som undersøker hvordan miljømessige kvaliteter og ulemper påvirker boligpriser. Forfatterne viser til at miljøforhold som trafikkstøy, forurensning og nærhet til industriområder kan inngå i boligkjøpernes vurdering av en eiendom.
+Miljøvariablene inkluderes derfor for å undersøke om slike forhold har en selvstendig sammenheng med boligprisene når vi allerede har kontrollert for boligkarakteristika, beliggenhet og sosioøkonomiske forhold.
+Det kan eksempelvis forventes at høyere miljøbelastning er forbundet med lavere boligpriser, men den faktiske sammenhengen må undersøkes empirisk.
 
-Miljøvariablene inkluderes derfor for å undersøke om slike forhold har en selvstendig sammenheng med boligprisene når vi allerede har kontrollert for boligkarakteristika, beliggenhet og sosioøkonomiske forhold. Det kan eksempelvis forventes at høyere miljøbelastning er forbundet med lavere boligpriser, men den faktiske sammenhengen må undersøkes empirisk.
-
-Maslianskaia-Pautrel og Baumont (2016, s. 925–927) fremhever også betydningen av romlige effekter. Miljøforhold kan påvirke flere nærliggende boliger samtidig, og boligprisene kan være påvirket av forhold i omkringliggende områder. Dette innebærer at en vanlig OLS-modell ikke nødvendigvis fanger opp alle geografiske sammenhenger.
+@maslianskaia-pautrelEnvironmentalSpilloversTheir2016 fremhever også betydningen av romlige effekter.
+Miljøforhold kan påvirke flere nærliggende boliger samtidig, og boligprisene kan være påvirket av forhold i omkringliggende områder.
+Dette innebærer at en vanlig OLS-modell ikke nødvendigvis fanger opp alle geografiske sammenhenger [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 925-927].
 
 ```{r}
 # Modell 3: Legger til miljøvariabler
@@ -491,11 +590,15 @@ modell3 <- lm(
 
 ## Vurdering av modellene
 
-Ved å estimere tre modeller med gradvis flere forklaringsvariabler kan vi undersøke hvordan sammenhengen mellom boligpris og de ulike egenskapene endres når flere forhold kontrolleres for. Modell 1 gir et utgangspunkt basert på boligkarakteristika, modell 2 inkluderer geografiske og sosioøkonomiske forhold, mens modell 3 også undersøker betydningen av miljøbelastning.
+Ved å estimere tre modeller med gradvis flere forklaringsvariabler kan vi undersøke hvordan sammenhengen mellom boligpris og de ulike egenskapene endres når flere forhold kontrolleres for.
+Modell 1 gir et utgangspunkt basert på boligkarakteristika, modell 2 inkluderer geografiske og sosioøkonomiske forhold, mens modell 3 også undersøker betydningen av miljøbelastning.
 
-Modellene sammenlignes ved hjelp av blant annet justert R², AIC og koeffisientenes statistiske signifikans. En forbedring i modelltilpasningen ved inkludering av flere variabler kan indikere at disse bidrar til å forklare variasjonen i boligprisene. Samtidig må modellvalget vurderes ut fra økonomisk teori og risikoen for multikollinearitet.
+Modellene sammenlignes ved hjelp av blant annet justert R², AIC og koeffisientenes statistiske signifikans.
+En forbedring i modelltilpasningen ved inkludering av flere variabler kan indikere at disse bidrar til å forklare variasjonen i boligprisene.
+Samtidig må modellvalget vurderes ut fra økonomisk teori og risikoen for multikollinearitet.
 
-Et viktig poeng fra Maslianskaia-Pautrel og Baumont (2016) er at boligpriser og miljøforhold kan være romlig avhengige. De tre OLS-modellene gir derfor et grunnlag for videre undersøkelser av romlig autokorrelasjon og eventuelle romlige regresjonsmodeller senere i oppgaven.
+Et viktig poeng fra @maslianskaia-pautrelEnvironmentalSpilloversTheir2016 er at boligpriser og miljøforhold kan være romlig avhengige.
+De tre OLS-modellene gir derfor et grunnlag for videre undersøkelser av romlig autokorrelasjon og eventuelle romlige regresjonsmodeller senere i oppgaven.
 
 ```{r}
 library(lmtest)
@@ -536,39 +639,54 @@ modelsummary(
 )
 ```
 
-## Diskusjon av resultat fra regresjonsmodell 
+## Diskusjon av resultat fra regresjonsmodell
 
 ### Modell 1
 
 Modellen har en forklaringskraft på 38,8 %, noe som innebærer at variablene forklarer omtrent 38,8 % av variasjonen i logaritmisk boligpris.
 
-Koeffisienten til log(TLA) er 1,273 og statistisk signifikant på 0,1 %-nivå. Ettersom både boligpris og boligareal er logaritmert, kan koeffisienten tolkes som en elastisitet. En økning i boligarealet på 1 % er dermed forbundet med omtrent 1,27 % høyere boligpris, når salgstidspunktet holdes konstant.
+Koeffisienten til log(TLA) er 1,273 og statistisk signifikant på 0,1 %-nivå.
+Ettersom både boligpris og boligareal er logaritmert, kan koeffisienten tolkes som en elastisitet.
+En økning i boligarealet på 1 % er dermed forbundet med omtrent 1,27 % høyere boligpris, når salgstidspunktet holdes konstant.
 
-Resultatet er i tråd med hedonisk pristeori, hvor boligens fysiske egenskaper forventes å ha betydning for markedsverdien. Samtidig viser den relativt lave forklaringskraften at boligareal og tidsdummyer alene ikke er tilstrekkelig til å forklare variasjonen i boligprisene.
+Resultatet er i tråd med hedonisk pristeori, hvor boligens fysiske egenskaper forventes å ha betydning for markedsverdien.
+Samtidig viser den relativt lave forklaringskraften at boligareal og tidsdummyer alene ikke er tilstrekkelig til å forklare variasjonen i boligprisene.
 
 ### Model 2
 
-I modell 2 inkluderes avstand til sentrum og sosioøkonomiske variabler fra ACS5 og EJScreen. Forklaringskraften øker betydelig, fra 38,8 % til 72,6 %. Dette tyder på at geografiske og sosioøkonomiske forhold bidrar vesentlig til å forklare boligprisforskjellene.
+I modell 2 inkluderes avstand til sentrum og sosioøkonomiske variabler fra ACS5 og EJScreen.
+Forklaringskraften øker betydelig, fra 38,8 % til 72,6 %.
+Dette tyder på at geografiske og sosioøkonomiske forhold bidrar vesentlig til å forklare boligprisforskjellene.
 
-Koeffisienten til log(TLA) reduseres fra 1,273 til 0,801, men er fortsatt statistisk signifikant. Dette indikerer at noe av sammenhengen mellom boligareal og boligpris i den første modellen også kan være knyttet til beliggenhet og nabolagsforhold.
+Koeffisienten til log(TLA) reduseres fra 1,273 til 0,801, men er fortsatt statistisk signifikant.
+Dette indikerer at noe av sammenhengen mellom boligareal og boligpris i den første modellen også kan være knyttet til beliggenhet og nabolagsforhold.
 
-Avstand til sentrum (dist_CBD) har en positiv og signifikant koeffisient på 0,013. Dette innebærer at boliger lenger unna sentrum i gjennomsnitt har høyere priser, når de øvrige variablene holdes konstante. En mulig forklaring er at boligområder utenfor sentrum kan ha kvaliteter som verdsettes høyt i boligmarkedet.
+Avstand til sentrum (dist_CBD) har en positiv og signifikant koeffisient på 0,013.
+Dette innebærer at boliger lenger unna sentrum i gjennomsnitt har høyere priser, når de øvrige variablene holdes konstante.
+En mulig forklaring er at boligområder utenfor sentrum kan ha kvaliteter som verdsettes høyt i boligmarkedet.
 
-Inntektsnivå har en positiv sammenheng med boligpris, mens arbeidsledighet, lavinntektsandel og andelen med lav utdanning har negative og statistisk signifikante sammenhenger. Dette understreker betydningen av sosioøkonomiske forskjeller mellom boligområder.
+Inntektsnivå har en positiv sammenheng med boligpris, mens arbeidsledighet, lavinntektsandel og andelen med lav utdanning har negative og statistisk signifikante sammenhenger.
+Dette understreker betydningen av sosioøkonomiske forskjeller mellom boligområder.
 
-Resultatene støtter dermed den generelle tilnærmingen hos Maslianskaia-Pautrel og Baumont (2016), hvor boligens verdi ikke bare bestemmes av dens fysiske egenskaper, men også av forhold ved området den ligger i.
+Resultatene støtter dermed den generelle tilnærmingen hos @maslianskaia-pautrelEnvironmentalSpilloversTheir2016, hvor boligens verdi ikke bare bestemmes av dens fysiske egenskaper, men også av forhold ved området den ligger i.
 
 ### Modell 3
 
-I modell 3 inkluderes miljøvariablene PRE1960PCT, PTRAF, PNPL og PM25. Forklaringskraften øker videre fra 72,6 % til 74,7 %, samtidig som AIC reduseres fra 25 556,9 til 23 547,7. Dette indikerer at den tredje modellen gir bedre tilpasning til datamaterialet.
+I modell 3 inkluderes miljøvariablene PRE1960PCT, PTRAF, PNPL og PM25.
+Forklaringskraften øker videre fra 72,6 % til 74,7 %, samtidig som AIC reduseres fra 25 556,9 til 23 547,7.
+Dette indikerer at den tredje modellen gir bedre tilpasning til datamaterialet.
 
-Andelen eldre boliger (PRE1960PCT) har en negativ og statistisk signifikant koeffisient på -0,365. Dette kan tyde på at områder med en høyere andel eldre boligmasse har lavere boligpriser, når øvrige forhold holdes konstante.
+Andelen eldre boliger (PRE1960PCT) har en negativ og statistisk signifikant koeffisient på -0,365.
+Dette kan tyde på at områder med en høyere andel eldre boligmasse har lavere boligpriser, når øvrige forhold holdes konstante.
 
 Trafikkvariabelen (PTRAF) har også en negativ og signifikant koeffisient, noe som er forenlig med forventningen om at trafikkbelastning kan redusere attraktiviteten til et boligområde.
 
-Samtidig har både PNPL og PM25 positive og statistisk signifikante koeffisienter. Dette er ikke nødvendigvis i tråd med forventningen om at høyere miljøbelastning skal være forbundet med lavere boligpriser. Resultatene kan skyldes sammenhenger mellom miljøbelastning og andre geografiske eller økonomiske forhold som ikke fullt ut fanges opp av modellen.
+Samtidig har både PNPL og PM25 positive og statistisk signifikante koeffisienter.
+Dette er ikke nødvendigvis i tråd med forventningen om at høyere miljøbelastning skal være forbundet med lavere boligpriser.
+Resultatene kan skyldes sammenhenger mellom miljøbelastning og andre geografiske eller økonomiske forhold som ikke fullt ut fanges opp av modellen.
 
-Maslianskaia-Pautrel og Baumont (2016) understreker at miljøeffekter kan ha en romlig dimensjon, og at påvirkningen på boligpriser ikke nødvendigvis begrenser seg til den enkelte eiendommen. Dette er relevant for våre resultater, ettersom miljøvariablene kan være geografisk konsentrerte og korrelert med andre nabolagskarakteristika.
+@maslianskaia-pautrelEnvironmentalSpilloversTheir2016 understreker at miljøeffekter kan ha en romlig dimensjon, og at påvirkningen på boligpriser ikke nødvendigvis begrenser seg til den enkelte eiendommen.
+Dette er relevant for våre resultater, ettersom miljøvariablene kan være geografisk konsentrerte og korrelert med andre nabolagskarakteristika.
 
 # Oppgave 6
 
@@ -602,37 +720,50 @@ tidstest[c("Res.Df", "Df", "F", "Pr(>F)")]
 
 ## Tolkning av tekst
 
-For å undersøke om tidsdummyene samlet sett har betydning for boligprisene, gjennomføres en simultan F-test ved hjelp av funksjonen linearHypothesis() fra R-pakken car. Testen utføres på modell 3, som inkluderer boligkarakteristika, beliggenhet, sosioøkonomiske forhold og miljøvariabler.
+For å undersøke om tidsdummyene samlet sett har betydning for boligprisene, gjennomføres en simultan F-test ved hjelp av funksjonen linearHypothesis() fra R-pakken car.
+Testen utføres på modell 3, som inkluderer boligkarakteristika, beliggenhet, sosioøkonomiske forhold og miljøvariabler.
 
 Nullhypotesen (H₀) er at alle koeffisientene til tidsdummyene er lik null, mens alternativhypotesen (H₁) er at minst én av koeffisientene er forskjellig fra null.
 
 Testen gjennomføres med HC3-robust kovariansestimering for å ta hensyn til mulig heteroskedastisitet.
 
-Resultatet gir en F-verdi på 14,052 med 69 og 25 268 frihetsgrader, og en p-verdi under 2,2 × 10⁻¹⁶. Nullhypotesen forkastes dermed på 5 %-signifikansnivå.
+Resultatet gir en F-verdi på 14,052 med 69 og 25 268 frihetsgrader, og en p-verdi under 2,2 × 10⁻¹⁶.
+Nullhypotesen forkastes dermed på 5 %-signifikansnivå.
 
 Dette innebærer at tidsdummyene samlet sett er statistisk signifikante, og at salgstidspunktet bidrar til å forklare variasjonen i boligprisene i Lucas County i perioden 1993–1998, også når vi kontrollerer for boligens størrelse, beliggenhet, sosioøkonomiske forhold og miljøvariabler.
 
-Resultatet understreker viktigheten av å inkludere tidsdummyer i de hedoniske boligprismodellene. Uten disse variablene risikerer vi at endringer i det generelle boligprisnivået over tid påvirker de estimerte sammenhengene mellom boligpris og de øvrige forklaringsvariablene.
+Resultatet understreker viktigheten av å inkludere tidsdummyer i de hedoniske boligprismodellene.
+Uten disse variablene risikerer vi at endringer i det generelle boligprisnivået over tid påvirker de estimerte sammenhengene mellom boligpris og de øvrige forklaringsvariablene.
 
 # Oppgave 7 Spatial Regressions
 
-Resultatene fra de hedoniske modellene i forrige del bygger på antakelsen om at feilleddene er uavhengige av hverandre. Når vi arbeider med boligdata, er dette ofte en urealistisk antakelse. Boliger som ligger nær hverandre, deler gjerne mange av de samme egenskapene, som nabolagskvalitet, tilgang til tjenester og miljøforhold. Mange av disse egenskapene er vanskelige å måle, og vil derfor havne i feilleddet. Dersom slike uobserverte forhold er romlig korrelerte, vil også residualene være romlig korrelerte.
+Resultatene fra de hedoniske modellene i forrige del bygger på antakelsen om at feilleddene er uavhengige av hverandre.
+Når vi arbeider med boligdata, er dette ofte en urealistisk antakelse.
+Boliger som ligger nær hverandre, deler gjerne mange av de samme egenskapene, som nabolagskvalitet, tilgang til tjenester og miljøforhold.
+Mange av disse egenskapene er vanskelige å måle, og vil derfor havne i feilleddet.
+Dersom slike uobserverte forhold er romlig korrelerte, vil også residualene være romlig korrelerte.
 
-Ignorerer vi romlig avhengighet, kan OLS-estimatene bli ineffisiente eller forventningsskjeve, og de implisitte prisene kan bli feiltolket (Maslianskaia-Pautrel & Baumont, 2016, s. 922, 925, 938). Formålet med denne delen er å undersøke om det finnes uforklarte romlige effekter i residualene, og i så fall hvilken romlig regresjonsmodell som best fanger dem opp.
+Ignorerer vi romlig avhengighet, kan OLS-estimatene bli ineffisiente eller forventningsskjeve, og de implisitte prisene kan bli feiltolket [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 922, 925, 938].
+Formålet med denne delen er å undersøke om det finnes uforklarte romlige effekter i residualene, og i så fall hvilken romlig regresjonsmodell som best fanger dem opp.
 
 ## Modellformulering, samt områdevariabler for inntekt og etnisitet
 
-Utgangspunktet for de romlige modellene er en hedonisk prismodell med logaritmen av salgsprisen som avhengig variabel. I matrisenotasjon kan OLS-modellen skrives som
+Utgangspunktet for de romlige modellene er en hedonisk prismodell med logaritmen av salgsprisen som avhengig variabel.
+I matrisenotasjon kan OLS-modellen skrives som
 
-$$
-y = X\beta + \varepsilon, \qquad \varepsilon \sim N(0, \sigma^2 I)
-$$
+$$y = X\beta + \varepsilon, \qquad \varepsilon \sim N(0, \sigma^2 I)$$
 
 der $y$ er en $n \times 1$-vektor med log pris, $X$ er en $n \times k$-matrise med forklaringsvariabler, $\beta$ er en vektor med koeffisienter og $\varepsilon$ er feilleddet.
 
-Modellen bygger på modell 3, men er utvidet med flere huskarakteristika. I tillegg til boligareal inngår tomtestørrelse, antall rom, soverom, bad og halvbad, garasje og boligens alder ved salg. Alderen inngår som et tredjegradspolynom. Det gjør at prisen kan falle med alderen for nyere boliger og stige igjen for de eldste, som ofte har en historisk verdi. Videre inngår avstand til CBD, demografiske og sosioøkonomiske variabler fra ACS5 og EJScreen, et utvalg miljøvariabler fra EJScreen, samt tidsdummyer for år og måned.
+Modellen bygger på modell 3, men er utvidet med flere huskarakteristika.
+I tillegg til boligareal inngår tomtestørrelse, antall rom, soverom, bad og halvbad, garasje og boligens alder ved salg.
+Alderen inngår som et tredjegradspolynom.
+Det gjør at prisen kan falle med alderen for nyere boliger og stige igjen for de eldste, som ofte har en historisk verdi.
+Videre inngår avstand til CBD, demografiske og sosioøkonomiske variabler fra ACS5 og EJScreen, et utvalg miljøvariabler fra EJScreen, samt tidsdummyer for år og måned.
 
-Oppgaven krever at modellen inneholder områdevariabler for inntekt og etnisitet. Inntekt per innbygger (målt i 1 000 dollar) og andelen svarte og asiatiske innbyggere i census tracten inngår som slike variabler. Disse fanger opp sosioøkonomiske forskjeller mellom nabolagene som ikke forklares av boligens fysiske egenskaper.
+Oppgaven krever at modellen inneholder områdevariabler for inntekt og etnisitet.
+Inntekt per innbygger (målt i 1 000 dollar) og andelen svarte og asiatiske innbyggere i census tracten inngår som slike variabler.
+Disse fanger opp sosioøkonomiske forskjeller mellom nabolagene som ikke forklares av boligens fysiske egenskaper.
 
 ```{r}
 #| label: sp-data
@@ -651,7 +782,11 @@ lucas_sp <- lucas_full |>
 lucas_df <- st_drop_geometry(lucas_sp)
 nrow(lucas_sp)
 ```
-Datasettet som brukes i de romlige modellene, består av 25 213 observasjoner. Det er 138 færre enn i `lucas_full`. Differansen skyldes at vi har fjernet boliger med manglende tomtestørrelse, og boliger som er registrert solgt før de var ferdig bygget (negativ alder ved salg). Log-transformasjonen krever at tomtestørrelsen er positiv, og en negativ alder gir ikke mening i alderspolynomet.
+
+Datasettet som brukes i de romlige modellene, består av 25 213 observasjoner.
+Det er 138 færre enn i `lucas_full`.
+Differansen skyldes at vi har fjernet boliger med manglende tomtestørrelse, og boliger som er registrert solgt før de var ferdig bygget (negativ alder ved salg).
+Log-transformasjonen krever at tomtestørrelsen er positiv, og en negativ alder gir ikke mening i alderspolynomet.
 
 ```{r}
 #| label: sp-formula
@@ -668,19 +803,30 @@ durbin_sp <- as.formula(~ log_TLA + age_sold + log_lot + pc_inntekt_1000 + andel
 
 ## Vektmatrise med k nærmeste naboer, k = 3 og k = 10
 
-For å kunne teste og modellere romlige effekter må vi definere hvilke observasjoner som er naboer. Dette gjøres gjennom en romlig vektmatrise $W$ (LeSage, 2014; Maslianskaia-Pautrel & Baumont, 2016, s. 925, 932), som er en $n \times n$-matrise der elementet $w_{ij}$ er større enn null dersom bolig $j$ er nabo til bolig $i$, og null ellers. Diagonalelementene er null, slik at en bolig ikke er nabo med seg selv.
+For å kunne teste og modellere romlige effekter må vi definere hvilke observasjoner som er naboer.
+Dette gjøres gjennom en romlig vektmatrise $W$ [@lesageWhatRegionalScientists2014; @maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 925, 932], som er en $n \times n$-matrise der elementet $w_{ij}$ er større enn null dersom bolig $j$ er nabo til bolig $i$, og null ellers.
+Diagonalelementene er null, slik at en bolig ikke er nabo med seg selv.
 
-Datasettet består av punktobservasjoner, og naboskap kan derfor ikke defineres ut fra felles grenser slik vi gjør med polygoner. I hedoniske studier defineres naboer vanligvis enten ved en avstandsgrense eller ved et gitt antall nærmeste naboer (Maslianskaia-Pautrel & Baumont, 2016, s. 932). Problemet med en avstandsgrense er at tettheten av boliger varierer mye i Lucas County. Med samme avstand vil boliger i Toledo sentrum få svært mange naboer, mens boliger i de landlige områdene i vest kan få ingen (Bivand et al., 2013, s. 247–248).
+Datasettet består av punktobservasjoner, og naboskap kan derfor ikke defineres ut fra felles grenser slik vi gjør med polygoner.
+I hedoniske studier defineres naboer vanligvis enten ved en avstandsgrense eller ved et gitt antall nærmeste naboer [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 932].
+Problemet med en avstandsgrense er at tettheten av boliger varierer mye i Lucas County.
+Med samme avstand vil boliger i Toledo sentrum få svært mange naboer, mens boliger i de landlige områdene i vest kan få ingen [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 933].
 
-Vi bruker derfor *k nærmeste naboer*. Det innebærer at hver bolig får nøyaktig $k$ naboer, nemlig de $k$ boligene som ligger nærmest i luftlinje. Fordelen er at alle observasjoner får like mange naboer, og at ingen blir stående uten naboer. Maslianskaia-Pautrel og Baumont (2016, s. 933) gir også en økonomisk begrunnelse: med k nærmeste naboer har en boligkjøper like mye prisinformasjon å sammenligne med, uansett om boligen ligger i et tett eller et spredtbygd område. En konsekvens er at vektmatrisen ikke er symmetrisk. At bolig $j$ er blant de nærmeste naboene til bolig $i$, betyr ikke nødvendigvis at $i$ er blant de nærmeste naboene til $j$. Dette gjelder særlig i områder med lav tetthet.
+Vi bruker derfor *k nærmeste naboer*.
+Det innebærer at hver bolig får nøyaktig $k$ naboer, nemlig de $k$ boligene som ligger nærmest i luftlinje.
+Fordelen er at alle observasjoner får like mange naboer, og at ingen blir stående uten naboer.
+@maslianskaia-pautrelEnvironmentalSpilloversTheir2016 gir også en økonomisk begrunnelse: med k nærmeste naboer har en boligkjøper like mye prisinformasjon å sammenligne med, uansett om boligen ligger i et tett eller et spredtbygd område.
+En konsekvens er at vektmatrisen ikke er symmetrisk.
+At bolig $j$ er blant de nærmeste naboene til bolig $i$, betyr ikke nødvendigvis at $i$ er blant de nærmeste naboene til $j$.
+Dette gjelder særlig i områder med lav tetthet.
 
-Matrisen radstandardiseres, slik at summen av vektene i hver rad er lik en (Maslianskaia-Pautrel & Baumont, 2016, s. 936):
+Matrisen radstandardiseres, slik at summen av vektene i hver rad er lik en [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 936]:
 
-$$
-w_{ij}^{*} = \frac{w_{ij}}{\sum_j w_{ij}} = \frac{1}{k}
-$$
+$$w_{ij}^{*} = \frac{w_{ij}}{\sum_j w_{ij}} = \frac{1}{k}$$
 
-Det romlige laget $Wy$ blir dermed gjennomsnittsprisen blant de $k$ nærmeste naboene. Vi estimerer modellene med både $k = 3$ og $k = 10$. Med tre naboer fanger vi opp de aller nærmeste omgivelsene, mens ti naboer gir et bredere mål på nabolaget.
+Det romlige laget $Wy$ blir dermed gjennomsnittsprisen blant de $k$ nærmeste naboene.
+Vi estimerer modellene med både $k = 3$ og $k = 10$.
+Med tre naboer fanger vi opp de aller nærmeste omgivelsene, mens ti naboer gir et bredere mål på nabolaget.
 
 ```{r}
 #| label: sp-weights
@@ -695,9 +841,13 @@ lw_k10 <- nb2listw(nb_k10, style = "W")
 
 summary(nb_k10)
 ```
-Oppsummeringen av vektmatrisen bekrefter at alle de 25 213 boligene har nøyaktig ti naboer, til sammen 252 130 naboforbindelser. Matrisen er ikke symmetrisk, slik vi forventet med k nærmeste naboer.
 
-Før vi estimerer modellene med romlige lag i forklaringsvariablene, undersøker vi hvor like $X$ og $WX$ er. Variabler fra ACS5 har samme verdi for alle boliger i samme census tract, og de fleste naboene vil ligge i samme tract. Da kan $WX$ bli tilnærmet lik $X$, noe som gir problemer med multikollinearitet.
+Oppsummeringen av vektmatrisen bekrefter at alle de 25 213 boligene har nøyaktig ti naboer, til sammen 252 130 naboforbindelser.
+Matrisen er ikke symmetrisk, slik vi forventet med k nærmeste naboer.
+
+Før vi estimerer modellene med romlige lag i forklaringsvariablene, undersøker vi hvor like $X$ og $WX$ er.
+Variabler fra ACS5 har samme verdi for alle boliger i samme census tract, og de fleste naboene vil ligge i samme tract.
+Da kan $WX$ bli tilnærmet lik $X$, noe som gir problemer med multikollinearitet.
 
 ```{r}
 #| label: sp-wx-cor
@@ -706,17 +856,24 @@ vars_durbin <- c("log_TLA", "age_sold", "log_lot", "pc_inntekt_1000", "andel_sva
 map_dbl(vars_durbin, \(v) cor(lucas_df[[v]], lag.listw(lw_k10, lucas_df[[v]]))) |>
   set_names(vars_durbin)
 ```
-For huskarakteristikaene er korrelasjonen mellom X og WX moderat til høy (0,73 for log boligareal, 0,85 for alder og 0,88 for log tomtestørrelse). For områdevariablene er korrelasjonen derimot nesten perfekt: 0,989 for inntekt per innbygger og 0,996 for andelen svarte. Dette er som forventet, siden ACS5-variablene er målt på tract-nivå og de ti nærmeste naboene nesten alltid ligger i samme tract. For disse variablene vil det derfor være svært vanskelig å skille den direkte effekten ($\beta$) fra den indirekte effekten ($\theta$) i SDEM- og SLX-modellene. Vi beholder variablene i Durbin-spesifikasjonen fordi oppgaven ber om impacts for inntekt og etnisitet, men tolker for disse variablene først og fremst den samlede effekten $\beta + \theta$.
+
+For huskarakteristikaene er korrelasjonen mellom X og WX moderat til høy (0,73 for log boligareal, 0,85 for alder og 0,88 for log tomtestørrelse).
+For områdevariablene er korrelasjonen derimot nesten perfekt: 0,989 for inntekt per innbygger og 0,996 for andelen svarte.
+Dette er som forventet, siden ACS5-variablene er målt på tract-nivå og de ti nærmeste naboene nesten alltid ligger i samme tract.
+For disse variablene vil det derfor være svært vanskelig å skille den direkte effekten ($\beta$) fra den indirekte effekten ($\theta$) i SDEM- og SLX-modellene.
+Vi beholder variablene i Durbin-spesifikasjonen fordi oppgaven ber om impacts for inntekt og etnisitet, men tolker for disse variablene først og fremst den samlede effekten $\beta + \theta$.
 
 ## Test for romlig autokorrelasjon i residualene
 
-Vi tester om det finnes romlig autokorrelasjon i residualene fra OLS-modellen ved hjelp av Moran's I (Anselin, 1988):
+Vi tester om det finnes romlig autokorrelasjon i residualene fra OLS-modellen ved hjelp av Moran's I [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 938]:
 
-$$
-I = \frac{n}{S_0} \frac{e^{\top} W e}{e^{\top} e}, \qquad S_0 = \sum_i \sum_j w_{ij}
-$$
+$$I = \frac{n}{S_0} \frac{e^{\top} W e}{e^{\top} e}, \qquad S_0 = \sum_i \sum_j w_{ij}$$
 
-der $e$ er vektoren med OLS-residualer. Med en radstandardisert matrise er $S_0 = n$, og Moran's I tilsvarer stigningstallet i en regresjon av de romlig laggede residualene $We$ på residualene $e$. Nullhypotesen er at det ikke finnes romlig autokorrelasjon. En positiv og signifikant verdi betyr at boliger der modellen overvurderer eller undervurderer prisen, ligger samlet i rommet. Funksjonen `lm.morantest()` tar hensyn til at residualene er estimert og ikke observert, og er derfor bedre egnet enn en vanlig Moran's I-test.
+der $e$ er vektoren med OLS-residualer.
+Med en radstandardisert matrise er $S_0 = n$, og Moran's I tilsvarer stigningstallet i en regresjon av de romlig laggede residualene $We$ på residualene $e$.
+Nullhypotesen er at det ikke finnes romlig autokorrelasjon.
+En positiv og signifikant verdi betyr at boliger der modellen overvurderer eller undervurderer prisen, ligger samlet i rommet.
+Funksjonen `lm.morantest()` tar hensyn til at residualene er estimert og ikke observert, og er derfor bedre egnet enn en vanlig Moran's I-test.
 
 ```{r}
 #| label: sp-ols
@@ -736,11 +893,21 @@ tibble(
   `z-verdi`   = c(moran_k3$statistic, moran_k10$statistic),
   `p-verdi`   = c(moran_k3$p.value, moran_k10$p.value)
 ) |>
+  mutate(
+    `p-verdi` = if_else(
+      `p-verdi` < 0.001,
+      "< 0,001",
+      format(round(`p-verdi`, 3), decimal.mark = ",", nsmall = 3)
+    )
+  ) |>
   gt() |>
-  fmt_number(columns = 2:4, decimals = 3) |>
-  fmt_scientific(columns = 5, decimals = 2)
+  fmt_number(columns = 2:4, decimals = 3, locale = "nb")
 ```
-Moran-plottet viser den samme sammenhengen grafisk. Residualene står på førsteaksen og de romlig laggede residualene på andreaksen. Dersom residualene er romlig uavhengige, vil punktskyen være flat. En positiv helning tyder på at det fortsatt finnes romlige effekter som modellen ikke har fanget opp.
+
+Moran-plottet viser den samme sammenhengen grafisk.
+Residualene står på førsteaksen og de romlig laggede residualene på andreaksen.
+Dersom residualene er romlig uavhengige, vil punktskyen være flat.
+En positiv helning tyder på at det fortsatt finnes romlige effekter som modellen ikke har fanget opp.
 
 ```{r}
 #| label: fig-moran-ols
@@ -749,25 +916,38 @@ moran.plot(residuals(ols_sp), listw = lw_k10, pch = ".", labels = FALSE,
            xlab = "OLS-residualer", ylab = "Romlig laggede residualer")
 ```
 
-@tbl-moran-ols viser at Moran's I for residualene fra OLS-modellen er 0,365 med k = 3 og 0,319 med k = 10. Forventningen under nullhypotesen er tilnærmet null (−0,001), og z-verdiene er henholdsvis 76,1 og 119,7. Nullhypotesen om ingen romlig autokorrelasjon forkastes dermed klart for begge vektmatrisene. 
+@tbl-moran-ols viser at Moran's I for residualene fra OLS-modellen er 0,365 med k = 3 og 0,319 med k = 10.
+Forventningen under nullhypotesen er tilnærmet null (−0,001), og z-verdiene er henholdsvis 76,1 og 119,7.
+Nullhypotesen om ingen romlig autokorrelasjon forkastes dermed klart for begge vektmatrisene.
 
-Den positive helningen i @fig-moran-ols bekrefter dette. Boliger der modellen undervurderer prisen, ligger gjerne nær andre boliger der prisen også undervurderes. Det tyder på at det finnes stedsspesifikke forhold som ikke fanges opp av forklaringsvariablene, og vi går derfor videre med romlige regresjonsmodeller.
+Den positive helningen i @fig-moran-ols bekrefter dette.
+Boliger der modellen undervurderer prisen, ligger gjerne nær andre boliger der prisen også undervurderes.
+Det tyder på at det finnes stedsspesifikke forhold som ikke fanges opp av forklaringsvariablene, og vi går derfor videre med romlige regresjonsmodeller.
 
 ## Anselins tilnærming: Rao's score-tester
 
-Vi bruker to av de tre tilnærmingene til modellvalg som Maslianskaia-Pautrel og Baumont (2016, s. 933–934) beskriver. Den første følger Anselin (1988) og går fra det spesifikke til det generelle.
+Vi bruker to av de tre tilnærmingene til modellvalg som @maslianskaia-pautrelEnvironmentalSpilloversTheir2016 beskriver.
+Den første går fra det spesifikke til det generelle og bygger på beslutningsregelen til Anselin og kolleger [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 934].
 
-$$
-\text{SAR:} \quad y = \rho W y + X\beta + \varepsilon
-$$
+$$\text{SAR:} \quad y = \rho W y + X\beta + \varepsilon$$
 
-$$
-\text{SEM:} \quad y = X\beta + u, \qquad u = \lambda W u + \varepsilon
-$$
+$$\text{SEM:} \quad y = X\beta + u, \qquad u = \lambda W u + \varepsilon$$
 
-I SAR-modellen påvirkes prisen på en bolig direkte av prisene på naboboligene gjennom $\rho Wy$. En intuitiv forklaring er at kjøpere og eiendomsmeglere bruker nylige salg i nabolaget som referanse når de vurderer prisen. SAR-modellen velges ofte i hedoniske studier nettopp fordi «the market makes the prices» (Maslianskaia-Pautrel & Baumont, 2016, s. 934). I SEM-modellen er den romlige avhengigheten knyttet til feilleddet. Dette er aktuelt når det finnes uobserverte, romlig korrelerte faktorer som påvirker prisene, men der naboprisene i seg selv ikke har en egen effekt. Begge modellene nester OLS-modellen: dersom $\rho = 0$ eller $\lambda = 0$, får vi tilbake den vanlige OLS-modellen.
+I SAR-modellen påvirkes prisen på en bolig direkte av prisene på naboboligene gjennom $\rho Wy$.
+En intuitiv forklaring er at kjøpere og eiendomsmeglere bruker nylige salg i nabolaget som referanse når de vurderer prisen.
+SAR-modellen velges ofte i hedoniske studier nettopp fordi «the market makes the prices» [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 934].
+I SEM-modellen er den romlige avhengigheten knyttet til feilleddet.
+Dette er aktuelt når det finnes uobserverte, romlig korrelerte faktorer som påvirker prisene, men der naboprisene i seg selv ikke har en egen effekt.
+Begge modellene nester OLS-modellen: dersom $\rho = 0$ eller $\lambda = 0$, får vi tilbake den vanlige OLS-modellen.
 
-Valget mellom modellene gjøres ved hjelp av Rao's score-tester (Anselin, 1988), også kalt Lagrange multiplier-tester (LM-tester). Fordelen med disse testene er at de bare krever at OLS-modellen estimeres. `RSlag` tester nullhypotesen $\rho = 0$, og `RSerr` tester nullhypotesen $\lambda = 0$. Dersom bare én av testene er signifikant, velges den tilhørende modellen. Dersom begge er signifikante, ser vi på de robuste variantene `adjRSlag` og `adjRSerr`. Disse tester for én type avhengighet samtidig som de tar hensyn til at den andre typen kan være til stede. Modellen med den største robuste teststatistikken foretrekkes. `SARMA` tester begge parametrene samtidig (Maslianskaia-Pautrel & Baumont, 2016, s. 934).
+Valget mellom modellene gjøres ved hjelp av Rao's score-tester, også kalt Lagrange multiplier-tester (LM-tester) [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 934].
+Fordelen med disse testene er at de bare krever at OLS-modellen estimeres.
+`RSlag` tester nullhypotesen $\rho = 0$, og `RSerr` tester nullhypotesen $\lambda = 0$.
+Dersom bare én av testene er signifikant, velges den tilhørende modellen.
+Dersom begge er signifikante, ser vi på de robuste variantene `adjRSlag` og `adjRSerr`.
+Disse tester for én type avhengighet samtidig som de tar hensyn til at den andre typen kan være til stede.
+Modellen med den største robuste teststatistikken foretrekkes.
+`SARMA` tester begge parametrene samtidig [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 934].
 
 ```{r}
 #| label: sp-rstests
@@ -790,32 +970,52 @@ rs_tabell <- function(rs, k) {
 }
 
 bind_rows(rs_tabell(rs_k3, "k = 3"), rs_tabell(rs_k10, "k = 10")) |>
+  mutate(
+    `p-verdi` = if_else(
+      `p-verdi` < 0.001,
+      "< 0,001",
+      format(round(`p-verdi`, 3), decimal.mark = ",", nsmall = 3)
+    )
+  ) |>
   gt(groupname_col = "k") |>
-  fmt_number(columns = Statistikk, decimals = 1) |>
-  fmt_scientific(columns = `p-verdi`, decimals = 2)
+  fmt_number(columns = Statistikk, decimals = 1, locale = "nb")
 ```
-@tbl-rstests viser at både RSlag og RSerr er svært signifikante for begge vektmatrisene. Med et så stort datasett blir nesten alle testene signifikante, og størrelsen på teststatistikkene er derfor mer informativ enn p-verdiene. Vi må dessuten se på de robuste testene. Her gir de to vektmatrisene ulike svar. Med k = 3 er den robuste testen for lag-avhengighet (adjRSlag = 1 634,5) klart større enn den for feilleddsavhengighet (adjRSerr = 346,7), noe som peker mot SAR-modellen. Med k = 10 er forholdet motsatt: adjRSerr = 4 344,7 mot adjRSlag = 2 118,1, noe som peker mot SEM-modellen.
 
-Samtidig er begge de robuste testene signifikante for begge vektmatrisene, og SARMA-testen er svært stor (7 392,7 og 16 304,4). Dette tyder på at det finnes både lag- og feilleddsavhengighet i dataene, og at verken SAR eller SEM alene er en fullgod spesifikasjon. Anselins tilnærming gir oss dermed ikke en entydig konklusjon. Når diagnostikken er uklar, kan vi sammenligne modellene direkte. Med k = 10 har SEM-modellen lavere AIC (5 085,1) enn SAR-modellen (5 201,7), noe som støtter konklusjonen fra de robuste testene om at SEM er den beste av de to. Uklarheten i resultatene er også en motivasjon for å bruke LeSages tilnærming med nestede modeller.
+@tbl-rstests viser at både RSlag og RSerr er svært signifikante for begge vektmatrisene.
+Med et så stort datasett blir nesten alle testene signifikante, og størrelsen på teststatistikkene er derfor mer informativ enn p-verdiene.
+Vi må dessuten se på de robuste testene.
+Her gir de to vektmatrisene ulike svar.
+Med k = 3 er den robuste testen for lag-avhengighet (adjRSlag = 1 634,5) klart større enn den for feilleddsavhengighet (adjRSerr = 346,7), noe som peker mot SAR-modellen.
+Med k = 10 er forholdet motsatt: adjRSerr = 4 344.7 mot adjRSlag = 2 118.1, noe som peker mot SEM-modellen.
+
+Samtidig er begge de robuste testene signifikante for begge vektmatrisene, og SARMA-testen er svært stor (7 392,7 og 16 304,4).
+Dette tyder på at det finnes både lag- og feilleddsavhengighet i dataene, og at verken SAR eller SEM alene er en fullgod spesifikasjon.
+Anselins tilnærming gir oss dermed ikke en entydig konklusjon.
+Når diagnostikken er uklar, kan vi sammenligne modellene direkte.
+Med k = 10 har SEM-modellen lavere AIC (5 085,1) enn SAR-modellen (5 201,7), noe som støtter konklusjonen fra de robuste testene om at SEM er den beste av de to.
+Uklarheten i resultatene er også en motivasjon for å bruke LeSages tilnærming med nestede modeller.
 
 ### SAR-modellen og spatial impacts
 
-I SAR-modellen kan ikke koeffisientene $\beta$ tolkes direkte som marginale effekter. Løser vi modellen for $y$, får vi den reduserte formen
+I SAR-modellen kan ikke koeffisientene $\beta$ tolkes direkte som marginale effekter.
+Løser vi modellen for $y$, får vi den reduserte formen
 
-$$
-y = (I - \rho W)^{-1} X\beta + (I - \rho W)^{-1} \varepsilon
-$$
+$$y = (I - \rho W)^{-1} X\beta + (I - \rho W)^{-1} \varepsilon$$
 
 Den partielle deriverte av $y$ med hensyn på variabel $x_r$ er dermed en hel $n \times n$-matrise:
 
-$$
-\frac{\partial y}{\partial x_r^{\top}} = (I - \rho W)^{-1} \beta_r = S_r(W)
-$$
+$$\frac{\partial y}{\partial x_r^{\top}} = (I - \rho W)^{-1} \beta_r = S_r(W)$$
 
-Dette innebærer at en endring i en egenskap ved én bolig påvirker prisen på boligen selv, prisene på naboboligene, prisene på naboenes naboer og så videre. Effekten forplanter seg gjennom hele systemet, og spilloverne er derfor *globale* (Anselin, 2003; Maslianskaia-Pautrel & Baumont, 2016, s. 927). Den implisitte prisen er dermed mer enn den estimerte koeffisienten. Den består av en direkte effekt, som inkluderer tilbakekoblingen via naboene, og en indirekte effekt som spres til andre boliger (LeSage, 2014; Maslianskaia-Pautrel & Baumont, 2016, s. 921–922). Disse oppsummeres i direkte, indirekte og totale impacts, der den totale effekten gir den implisitte prisen. Impactene forklares nærmere i oppgave 8. 
+Dette innebærer at en endring i en egenskap ved én bolig påvirker prisen på boligen selv, prisene på naboboligene, prisene på naboenes naboer og så videre.
+Effekten forplanter seg gjennom hele systemet, og spilloverne er derfor globale [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 927].
+Den implisitte prisen er dermed mer enn den estimerte koeffisienten.
+Den består av en direkte effekt, som inkluderer tilbakekoblingen via naboene, og en indirekte effekt som spres til andre boliger [@lesageWhatRegionalScientists2014; @maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 921-922].
+Disse oppsummeres i direkte, indirekte og totale impacts, der den totale effekten gir den implisitte prisen.
+Impactene forklares nærmere i oppgave 8.
 
-Fordi datasettet har over 25 000 observasjoner, er det svært tidkrevende å beregne log-determinanten $\ln|I - \rho W|$ eksakt. Modellen estimeres derfor med `method = "MC"`, som tilnærmer log-determinanten ved hjelp av Monte Carlo-simulering. Av samme grunn beregnes impactene ved hjelp av sporene (traces) til potensene av $W$.
-
+Fordi datasettet har over 25 000 observasjoner, er det svært tidkrevende å beregne log-determinanten $\ln|I - \rho W|$ eksakt.
+Modellen estimeres derfor med `method = "MC"`, som tilnærmer log-determinanten ved hjelp av Monte Carlo-simulering.
+Av samme grunn beregnes impactene ved hjelp av sporene (traces) til potensene av $W$.
 
 ```{r}
 #| label: sp-sar
@@ -833,71 +1033,92 @@ imp_SAR_sum <- summary(imp_SAR_k10, zstats = TRUE, short = TRUE)
 ```{r}
 #| label: tbl-sar-impacts
 #| tbl-cap: "Impacts fra SAR-modellen (k = 10), utvalgte variabler. p-verdier i parentes."
+# Hjelpefunksjoner for norsk tallformat (brukes også i tbl-sdem-slx-impacts)
+nb   <- function(x, d) formatC(x, format = "f", digits = d, decimal.mark = ",")
+p_nb <- function(p) if_else(p < 0.001, "< 0,001", nb(p, 3))
+
 valgte <- c("log_TLA", "age_sold", "log_lot", "dist_CBD",
             "pc_inntekt_1000", "andel_svart", "PM25")
 
 imp_p <- imp_SAR_sum$pzmat
 
 tibble(
-  variabel  = str_remove(rownames(imp_p), " dy/dx$| \\(F\\)$"),
-  Direkte   = imp_SAR_k10$res$direct,
-  Indirekte = imp_SAR_k10$res$indirect,
-  Total     = imp_SAR_k10$res$total,
+  Variabel  = str_remove(rownames(imp_p), " dy/dx$| \\(F\\)$"),
+  dir       = imp_SAR_k10$res$direct,
+  ind       = imp_SAR_k10$res$indirect,
+  tot       = imp_SAR_k10$res$total,
   p_dir     = imp_p[, "Direct"],
   p_ind     = imp_p[, "Indirect"],
   p_tot     = imp_p[, "Total"]
 ) |>
-  filter(variabel %in% valgte) |>
+  filter(Variabel %in% valgte) |>
   mutate(
-    Direkte   = sprintf("%.4f (%.3f)", Direkte, p_dir),
-    Indirekte = sprintf("%.4f (%.3f)", Indirekte, p_ind),
-    Total     = sprintf("%.4f (%.3f)", Total, p_tot)
+    Direkte   = paste0(nb(dir, 4), " (", p_nb(p_dir), ")"),
+    Indirekte = paste0(nb(ind, 4), " (", p_nb(p_ind), ")"),
+    Total     = paste0(nb(tot, 4), " (", p_nb(p_tot), ")")
   ) |>
-  select(variabel, Direkte, Indirekte, Total) |>
+  select(Variabel, Direkte, Indirekte, Total) |>
   gt()
 ```
 
-Den estimerte romlige autoregressive parameteren er $\rho$ = 0,537, og den er svært signifikant (z = 100,0). Prisen på en bolig henger altså sterkt sammen med prisene på de ti nærmeste naboboligene. Fordi $\rho$ er såpass høy, blir den romlige multiplikatoren stor. Med en radstandardisert vektmatrise er den totale effekten lik $\beta_r / (1 - \rho)$, altså omtrent 2,16 ganger koeffisienten.
+Den estimerte romlige autoregressive parameteren er $\rho$ = 0,537, og den er svært signifikant (z = 100,0).
+Prisen på en bolig henger altså sterkt sammen med prisene på de ti nærmeste naboboligene.
+Fordi $\rho$ er såpass høy, blir den romlige multiplikatoren stor.
+Med en radstandardisert vektmatrise er den totale effekten lik $\beta_r / (1 - \rho)$, altså omtrent 2,16 ganger koeffisienten.
 
-@tbl-sar-impacts viser impactene for et utvalg av variablene. Impactene for boligareal og andelen svarte drøftes i oppgave 8. Avstand til CBD har en total effekt på −0,0029, som tilsvarer om lag 0,3 % lavere pris per kilometer fra sentrum. Inntekt per innbygger har en svakt negativ total effekt (−0,0028), i motsetning til den positive effekten i SDEM. Fortegnet for denne variabelen er altså følsomt for modellspesifikasjonen, noe som henger sammen med at den er sterkt korrelert med de andre sosioøkonomiske variablene.
+@tbl-sar-impacts viser impactene for et utvalg av variablene.
+Impactene for boligareal og andelen svarte drøftes i oppgave 8.
+Avstand til CBD har en total effekt på −0,0029, som tilsvarer om lag 0,3 % lavere pris per kilometer fra sentrum.
+Inntekt per innbygger har en svakt negativ total effekt (−0,0028), i motsetning til den positive effekten i SDEM.
+Fortegnet for denne variabelen er altså følsomt for modellspesifikasjonen, noe som henger sammen med at den er sterkt korrelert med de andre sosioøkonomiske variablene.
 
 ## LeSages tilnærming: lokalt eller globalt fenomen?
 
-LeSage (2014) argumenterer for at valget av romlig modell bør begynne med et teoretisk spørsmål: er spilloverne vi studerer *lokale* eller *globale*? Ved globale spillovers forplanter en endring seg gjennom hele systemet via naboenes naboer, slik som i SAR-modellen. Ved lokale spillovers påvirker en endring bare de umiddelbare naboene, slik de er definert i vektmatrisen, uten videre tilbakekobling. LeSage (2014) hevder at de fleste problemstillinger i regionaløkonomi er av den lokale typen. Maslianskaia-Pautrel og Baumont (2016, s. 921) tolker også den romlige dimensjonen i hedoniske modeller som enten lokale eller globale spillovers.
+@lesageWhatRegionalScientists2014 argumenterer for at valget av romlig modell bør begynne med et teoretisk spørsmål: er spilloverne vi studerer lokale eller globale?
+Ved globale spillovers forplanter en endring seg gjennom hele systemet via naboenes naboer, slik som i SAR-modellen.
+Ved lokale spillovers påvirker en endring bare de umiddelbare naboene, slik de er definert i vektmatrisen, uten videre tilbakekobling.
+LeSage (2014) hevder at de fleste problemstillinger i regionaløkonomi er av den lokale typen.
+@maslianskaia-pautrelEnvironmentalSpilloversTheir2016 tolker også den romlige dimensjonen i hedoniske modeller som enten lokale eller globale spillovers.
 
-Vi mener at boligprisdannelse først og fremst er et **lokalt** fenomen. En boligkjøper vurderer egenskapene ved boligen og de nærmeste omgivelsene, som størrelsen og standarden på naboboligene, inntektsnivået i nabolaget og miljøbelastningen der boligen ligger. Det er lite sannsynlig at størrelsen på en bolig i Sylvania påvirker prisen på en bolig i Toledo sentrum gjennom en lang kjede av naboer. 
+Vi mener at boligprisdannelse først og fremst er et **lokalt** fenomen.
+En boligkjøper vurderer egenskapene ved boligen og de nærmeste omgivelsene, som størrelsen og standarden på naboboligene, inntektsnivået i nabolaget og miljøbelastningen der boligen ligger.
+Det er lite sannsynlig at størrelsen på en bolig i Sylvania påvirker prisen på en bolig i Toledo sentrum gjennom en lang kjede av naboer.
 
-Dette er i tråd med Maslianskaia-Pautrel og Baumont (2016, s. 924), som påpeker at hedonisk verdsetting er særlig egnet for miljøeksternaliteter med lokale virkninger.
+Dette er i tråd med @maslianskaia-pautrelEnvironmentalSpilloversTheir2016, som påpeker at hedonisk verdsetting er særlig egnet for miljøeksternaliteter med lokale virkninger.
 
-For lokale fenomener anbefaler LeSage (2014) å starte med Spatial Durbin Error Model (SDEM). Dette tilsvarer tilnærmingen generelt-til-spesifikt (Maslianskaia-Pautrel & Baumont, 2016, s. 934):
-$$
-\text{SDEM:} \quad y = X\beta + WX\theta + u, \qquad u = \lambda W u + \varepsilon
-$$
+For lokale fenomener anbefaler @lesageWhatRegionalScientists2014 å starte med Spatial Durbin Error Model (SDEM).
+Dette tilsvarer tilnærmingen generelt-til-spesifikt [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 934]: $$\text{SDEM:} \quad y = X\beta + WX\theta + u, \qquad u = \lambda W u + \varepsilon$$
 
-Her inngår både boligens egne egenskaper $X$ og gjennomsnittet av egenskapene til de $k$ nærmeste naboene, $WX$. I tillegg fanger $\lambda Wu$ opp uobserverte, romlig korrelerte faktorer. Fordi modellen ikke inneholder $Wy$, er impactene enkle å tolke: den direkte effekten er $\beta_r$, og den indirekte effekten er $\theta_r$.
+Her inngår både boligens egne egenskaper $X$ og gjennomsnittet av egenskapene til de $k$ nærmeste naboene, $WX$.
+I tillegg fanger $\lambda Wu$ opp uobserverte, romlig korrelerte faktorer.
+Fordi modellen ikke inneholder $Wy$, er impactene enkle å tolke: den direkte effekten er $\beta_r$, og den indirekte effekten er $\theta_r$.
 
-Vi inkluderer bare romlige lag for et utvalg av variablene, ved hjelp av argumentet `Durbin = as.formula(~ ...)`. Tidsdummyene holdes utenfor, siden det ikke gir mening å tolke en spillover fra salgsmåneden til naboboligene.
+Vi inkluderer bare romlige lag for et utvalg av variablene, ved hjelp av argumentet `Durbin = as.formula(~ ...)`.
+Tidsdummyene holdes utenfor, siden det ikke gir mening å tolke en spillover fra salgsmåneden til naboboligene.
 
 ## Nestede modeller og likelihood ratio-test
 
 SDEM-modellen nester tre enklere modeller, som vist i @tbl-nesting.
 
 | Restriksjon | Modell |
-|---|---|
+|----|----|
 | $\theta = 0$ | SEM: $y = X\beta + u, \ u = \lambda W u + \varepsilon$ |
 | $\lambda = 0$ | SLX: $y = X\beta + WX\theta + \varepsilon$ |
 | $\theta = 0$ og $\lambda = 0$ | OLS: $y = X\beta + \varepsilon$ |
 
-: Modeller som er nestet i SDEM. {#tbl-nesting}
+: Modeller som er nestet i SDEM.
 
-SLX-modellen (spatial lag of X) inneholder bare lokale spillovers gjennom $WX$, og kan estimeres med OLS. SEM-modellen har bare romlig avhengighet i feilleddet. Fordi modellene er nestet, kan vi teste restriksjonene ved hjelp av en likelihood ratio-test (LeSage, 2014; Maslianskaia-Pautrel & Baumont, 2016, s. 934):
+SLX-modellen (spatial lag of X) inneholder bare lokale spillovers gjennom $WX$, og kan estimeres med OLS.
+SEM-modellen har bare romlig avhengighet i feilleddet.
+Fordi modellene er nestet, kan vi teste restriksjonene ved hjelp av en likelihood ratio-test [@lesageWhatRegionalScientists2014; @maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 934]:
 
-$$
-LR = -2 \left( \ln L_{\text{restriktert}} - \ln L_{\text{urestriktert}} \right) \sim \chi^2(m)
-$$
+$$LR = -2 \left( \ln L_{\text{restriktert}} - \ln L_{\text{urestriktert}} \right) \sim \chi^2(m)$$
 
-der $m$ er antall restriksjoner. Nullhypotesen er at den restrikterte modellen er tilstrekkelig. Forkastes nullhypotesen, foretrekkes den mer generelle modellen. Vi tester SDEM mot SEM ($\theta = 0$), SDEM mot SLX ($\lambda = 0$), og SEM og SLX mot OLS. SDEM- og SEM-modellene estimeres med `method = "MC"`.
-
+der $m$ er antall restriksjoner.
+Nullhypotesen er at den restrikterte modellen er tilstrekkelig.
+Forkastes nullhypotesen, foretrekkes den mer generelle modellen.
+Vi tester SDEM mot SEM ($\theta = 0$), SDEM mot SLX ($\lambda = 0$), og SEM og SLX mot OLS.
+SDEM- og SEM-modellene estimeres med `method = "MC"`.
 
 ```{r}
 #| label: sp-lesage
@@ -937,9 +1158,15 @@ lr_tabell <- function(m, k) {
 }
 
 bind_rows(lr_tabell(mod_k3, "k = 3"), lr_tabell(mod_k10, "k = 10")) |>
+  mutate(
+    `p-verdi` = if_else(
+      `p-verdi` < 0.001,
+      "< 0,001",
+      format(round(`p-verdi`, 3), decimal.mark = ",", nsmall = 3)
+    )
+  ) |>
   gt(groupname_col = "k") |>
-  fmt_number(columns = LR, decimals = 1) |>
-  fmt_scientific(columns = `p-verdi`, decimals = 2)
+  fmt_number(columns = LR, decimals = 1, locale = "nb")
 ```
 
 ```{r}
@@ -955,36 +1182,65 @@ map_dfr(
   .id = "k"
 ) |>
   gt(groupname_col = "k") |>
-  fmt_number(columns = c(logLik, AIC), decimals = 1)
+  fmt_number(columns = c(logLik, AIC), decimals = 1, locale = "nb")
 ```
-@tbl-lr viser resultatene fra likelihood ratio-testene. Testen av $\theta = 0$ (SDEM mot SEM) gir LR = 765,5 med k = 3 og LR = 479,0 med k = 10, med 5 frihetsgrader. Testen av $\lambda = 0$ (SDEM mot SLX) gir LR = 5 086,2 og LR = 6 708,0 med én frihetsgrad. Begge nullhypotesene forkastes klart for begge vektmatrisene. Verken de romlig laggede forklaringsvariablene eller det romlige feilleddet kan dermed utelates. Testene av SEM og SLX mot OLS er også klart signifikante, noe som bekrefter at OLS-modellen ikke er tilstrekkelig.
 
-Konklusjonen fra LeSages tilnærming er dermed at SDEM er den beste modellen. Dette støttes av @tbl-aic-spatial, der SDEM har lavest AIC for begge vektmatrisene. Rangeringen er den samme for k = 3 og k = 10: SDEM, SEM, SLX og OLS. Videre har alle de romlige modellene høyere log-likelihood med k = 10 enn med k = 3. For SDEM øker log-likelihood fra −3 163,3 til −2 207,1. Vektmatrisen med ti naboer gir dermed en bedre beskrivelse av den romlige strukturen, og vi bruker k = 10 i den videre tolkningen.
+@tbl-lr viser resultatene fra likelihood ratio-testene.
+Testen av $\theta = 0$ (SDEM mot SEM) gir LR = 765,5 med k = 3 og LR = 479,0 med k = 10, med 5 frihetsgrader.
+Testen av $\lambda = 0$ (SDEM mot SLX) gir LR = 5 086,2 og LR = 6 708,0 med én frihetsgrad.
+Begge nullhypotesene forkastes klart for begge vektmatrisene.
+Verken de romlig laggede forklaringsvariablene eller det romlige feilleddet kan dermed utelates.
+Testene av SEM og SLX mot OLS er også klart signifikante, noe som bekrefter at OLS-modellen ikke er tilstrekkelig.
 
-Det er verdt å merke seg at LR-testen av SEM mot OLS gir en mye større teststatistikk (7 747,1 med k = 10) enn testen av SLX mot OLS (1 518,1). Det romlige feilleddet forklarer altså langt mer av den romlige avhengigheten enn de laggede forklaringsvariablene gjør. Dette tyder på at mye av den romlige avhengigheten skyldes uobserverte nabolagsforhold, og ikke spillovers fra naboboligenes målte egenskaper.
+Konklusjonen fra LeSages tilnærming er dermed at SDEM er den beste modellen.
+Dette støttes av @tbl-aic-spatial, der SDEM har lavest AIC for begge vektmatrisene.
+Rangeringen er den samme for k = 3 og k = 10: SDEM, SEM, SLX og OLS.
+Videre har alle de romlige modellene høyere log-likelihood med k = 10 enn med k = 3.
+For SDEM øker log-likelihood fra −3 163,3 til −2 207,1.
+Vektmatrisen med ti naboer gir dermed en bedre beskrivelse av den romlige strukturen, og vi bruker k = 10 i den videre tolkningen.
+
+Det er verdt å merke seg at LR-testen av SEM mot OLS gir en mye større teststatistikk (7 747,1 med k = 10) enn testen av SLX mot OLS (1 518,1).
+Det romlige feilleddet forklarer altså langt mer av den romlige avhengigheten enn de laggede forklaringsvariablene gjør.
+Dette tyder på at mye av den romlige avhengigheten skyldes uobserverte nabolagsforhold, og ikke spillovers fra naboboligenes målte egenskaper.
 
 ```{r}
 #| label: tbl-spatial-models
-#| tbl-cap: "OLS, SAR, SEM, SLX og SDEM (k = 10). Tidsdummyer inkludert, men ikke vist."
+#| tbl-cap: "OLS, SAR, SEM, SLX og SDEM (k = 10). Tidsdummyer inkludert, men ikke vist. z- og t-verdier i parentes."
 modelsummary(
   list(OLS = mod_k10$OLS, SAR = SAR_k10, SEM = mod_k10$SEM,
        SLX = mod_k10$SLX, SDEM = mod_k10$SDEM),
   statistic = "statistic",
   coef_omit = "year_month",
+  coef_rename = c("I.age_sold.2." = "I(age_sold^2)", "I.age_sold.3." = "I(age_sold^3)"),
+  fmt = function(x) formatC(x, format = "f", digits = 3, decimal.mark = ","),
   stars = TRUE,
-  gof_map = c("nobs", "aic", "logLik"),
-  output = "gt",
-  coef_rename = c("I.age_sold.2." = "I(age_sold^2)", "I.age_sold.3." = "I(age_sold^3)")
+  gof_map = tribble(
+    ~raw,     ~clean,           ~fmt,
+    "nobs",   "Antall obs.",    function(x) formatC(x, format = "d", big.mark = " "),
+    "aic",    "AIC",            function(x) formatC(x, format = "f", digits = 1, big.mark = " ", decimal.mark = ","),
+    "logLik", "Log-likelihood", function(x) formatC(x, format = "f", digits = 1, big.mark = " ", decimal.mark = ",")
+  ),
+  output = "gt"
 )
 ```
 
 @tbl-spatial-models viser at de romlige parameterne er store og svært signifikante: $\rho$ = 0,537 i SAR-modellen, og $\lambda$ = 0,727 i SEM-modellen og 0,692 i SDEM-modellen.
 
-Koeffisientene for huskarakteristikaene er stabile på tvers av modellene og har forventet fortegn. Boligareal, tomtestørrelse, antall bad og halvbad og garasje har alle positive og signifikante effekter. For eksempel gir en frittstående garasje omtrent 16 % høyere pris i SDEM-modellen (exp(0,151) − 1), sammenlignet med en bolig uten garasje.
+Koeffisientene for huskarakteristikaene er stabile på tvers av modellene og har forventet fortegn.
+Boligareal, tomtestørrelse, antall bad og halvbad og garasje har alle positive og signifikante effekter.
+For eksempel gir en frittstående garasje omtrent 16 % høyere pris i SDEM-modellen (exp(0,151) − 1), sammenlignet med en bolig uten garasje.
 
-Avstand til CBD har negativt fortegn i alle de romlige modellene. I SDEM-modellen er koeffisienten −0,008, noe som betyr at prisen faller med omtrent 0,8 % per kilometer lenger fra sentrum, alt annet likt. Dette står i kontrast til den positive koeffisienten i modell 2 (0,013). Forskjellen skyldes trolig at modell 2 bare kontrollerte for boligareal. Boliger i forstedene har større tomter, er nyere og har oftere garasje, og når vi kontrollerer for disse egenskapene, får vi det fortegnet den monosentriske bymodellen forutsier (Brueckner, 2011, kap. 2).
+Avstand til CBD har negativt fortegn i alle de romlige modellene.
+I SDEM-modellen er koeffisienten −0,008, noe som betyr at prisen faller med omtrent 0,8 % per kilometer lenger fra sentrum, alt annet likt.
+Dette står i kontrast til den positive koeffisienten i modell 2 (0,013).
+Forskjellen skyldes trolig at modell 2 bare kontrollerte for boligareal.
+Boliger i forstedene har større tomter, er nyere og har oftere garasje, og når vi kontrollerer for disse egenskapene, får vi det fortegnet den monosentriske bymodellen forutsier.
 
-Flere av områdevariablene endrer fortegn eller signifikans mellom modellene. Andelen boliger bygget før 1960 (PRE1960PCT) er negativ i OLS og SEM, men positiv i SAR, SLX og SDEM. PM2,5 er positiv i flere av modellene. Dette tyder på at områdevariablene, som er målt på tract- eller blokknivå, er sterkt korrelert med hverandre og med den romlige strukturen i dataene. Koeffisientene for disse variablene bør derfor tolkes med forsiktighet.
+Flere av områdevariablene endrer fortegn eller signifikans mellom modellene.
+Andelen boliger bygget før 1960 (PRE1960PCT) er negativ i OLS og SEM, men positiv i SAR, SLX og SDEM.
+PM2,5 er positiv i flere av modellene.
+Dette tyder på at områdevariablene, som er målt på tract- eller blokknivå, er sterkt korrelert med hverandre og med den romlige strukturen i dataene.
+Koeffisientene for disse variablene bør derfor tolkes med forsiktighet.
 
 ```{r}
 #| label: sp-sdem-impacts
@@ -996,6 +1252,7 @@ imp_SLX_k10  <- impacts(mod_k10$SLX)
 summary(imp_SDEM_k10, zstats = TRUE)
 summary(imp_SLX_k10,  zstats = TRUE)
 ```
+
 ```{r}
 #| label: tbl-sdem-slx-impacts
 #| tbl-cap: "Direkte, indirekte og totale impacts fra SDEM og SLX (k = 10). z-verdier i parentes."
@@ -1016,9 +1273,9 @@ imp_tabell <- function(imp, navn) {
   ) |>
     filter(Variabel %in% vars_imp) |>
     mutate(
-      Direkte   = sprintf("%.3f (%.1f)", dir, dir / se_dir),
-      Indirekte = sprintf("%.3f (%.1f)", ind, ind / se_ind),
-      Total     = sprintf("%.3f (%.1f)", tot, tot / se_tot)
+      Direkte   = paste0(nb(dir, 3), " (", nb(dir / se_dir, 1), ")"),
+      Indirekte = paste0(nb(ind, 3), " (", nb(ind / se_ind, 1), ")"),
+      Total     = paste0(nb(tot, 3), " (", nb(tot / se_tot, 1), ")")
     ) |>
     select(Modell, Variabel, Direkte, Indirekte, Total)
 }
@@ -1030,18 +1287,36 @@ bind_rows(
   gt(groupname_col = "Modell")
 ```
 
-@tbl-sdem-slx-impacts viser direkte, indirekte og totale impacts fra SDEM- og SLX-modellene for variablene som inngår med romlige lag. Impactene for boligareal og andelen svarte drøftes i oppgave 8. Her ser vi på de øvrige variablene.
+@tbl-sdem-slx-impacts viser direkte, indirekte og totale impacts fra SDEM- og SLX-modellene for variablene som inngår med romlige lag.
+Impactene for boligareal og andelen svarte drøftes i oppgave 8.
+Her ser vi på de øvrige variablene.
 
-**Tomtestørrelse og alder.** Tomtestørrelsen hos naboene har ingen signifikant effekt (z = 0,9). Kjøpere legger altså vekt på sin egen tomt, men ikke på hvor store tomter naboene har. Alderen på naboboligene har derimot en sterk negativ effekt (−0,505, z = −16,5). Boliger i nabolag med eldre boligmasse har dermed lavere priser, uavhengig av boligens egen alder. Den direkte effekten av alder må tolkes sammen med andre- og tredjegradsleddene, og er derfor vanskeligere å tolke direkte.
+**Tomtestørrelse og alder.** Tomtestørrelsen hos naboene har ingen signifikant effekt (z = 0,9).
+Kjøpere legger altså vekt på sin egen tomt, men ikke på hvor store tomter naboene har.
+Alderen på naboboligene har derimot en sterk negativ effekt (−0,505, z = −16,5).
+Boliger i nabolag med eldre boligmasse har dermed lavere priser, uavhengig av boligens egen alder.
+Den direkte effekten av alder må tolkes sammen med andre- og tredjegradsleddene, og er derfor vanskeligere å tolke direkte.
 
-**Inntekt per innbygger.** For inntekt per innbygger ser vi det samme mønsteret som for andelen svarte. Verken den direkte effekten (0,0009, z = 0,6) eller den indirekte effekten (0,0030, z = 1,8) er signifikant på 5 %-nivå hver for seg. Den totale effekten (0,0039) er derimot klart signifikant (z = 3,8). Det betyr at 1 000 dollar høyere inntekt per innbygger i nabolaget er forbundet med omtrent 0,4 % høyere boligpris, alt annet likt. At standardfeilen for den totale effekten er mye mindre enn for de to delene, er et typisk tegn på multikollinearitet: modellen kan anslå den samlede effekten presist, men ikke fordele den mellom boligens egen tract og naboenes. Effekten er moderat, noe som henger sammen med at modellen også inneholder andre sterkt korrelerte sosioøkonomiske variabler, som andelen med lav inntekt (−0,110) og andelen uten videregående utdanning (−0,714).
+**Inntekt per innbygger.** For inntekt per innbygger ser vi det samme mønsteret som for andelen svarte.
+Verken den direkte effekten (0,0009, z = 0,6) eller den indirekte effekten (0,0030, z = 1,8) er signifikant på 5 %-nivå hver for seg.
+Den totale effekten (0,0039) er derimot klart signifikant (z = 3,8).
+Det betyr at 1 000 dollar høyere inntekt per innbygger i nabolaget er forbundet med omtrent 0,4 % høyere boligpris, alt annet likt.
+At standardfeilen for den totale effekten er mye mindre enn for de to delene, er et typisk tegn på multikollinearitet: modellen kan anslå den samlede effekten presist, men ikke fordele den mellom boligens egen tract og naboenes.
+Effekten er moderat, noe som henger sammen med at modellen også inneholder andre sterkt korrelerte sosioøkonomiske variabler, som andelen med lav inntekt (−0,110) og andelen uten videregående utdanning (−0,714).
 
-**Sammenligning med SLX.** Den indirekte effekten av boligareal er 0,219 i SLX, men bare 0,129 i SDEM. Den totale effekten faller tilsvarende fra 0,805 til 0,679. Forskjellen skyldes at SLX-modellen ikke har et romlig feilledd. Uobserverte nabolagsforhold, som generell attraktivitet eller kvaliteten på skoler, vil da delvis fanges opp av de laggede forklaringsvariablene. Store boliger ligger gjerne i attraktive nabolag, og i SLX tilskrives noe av nabolagets attraktivitet naboboligenes størrelse. Når $\lambda Wu$ tar opp denne avhengigheten i SDEM, blir spillover-effekten mindre. Også for alder gir modellene ulike svar: i SLX er den direkte effekten positiv (0,673) og den totale effekten ikke signifikant (z = 0,6), mens både den direkte og den totale effekten er negativ og signifikant i SDEM. Dette illustrerer hvorfor det er viktig å kontrollere for romlig avhengighet i feilleddet. Ellers risikerer vi å overvurdere de lokale spillovereffektene.
+**Sammenligning med SLX.** Den indirekte effekten av boligareal er 0,219 i SLX, men bare 0,129 i SDEM.
+Den totale effekten faller tilsvarende fra 0,805 til 0,679.
+Forskjellen skyldes at SLX-modellen ikke har et romlig feilledd.
+Uobserverte nabolagsforhold, som generell attraktivitet eller kvaliteten på skoler, vil da delvis fanges opp av de laggede forklaringsvariablene.
+Store boliger ligger gjerne i attraktive nabolag, og i SLX tilskrives noe av nabolagets attraktivitet naboboligenes størrelse.
+Når $\lambda Wu$ tar opp denne avhengigheten i SDEM, blir spillover-effekten mindre.
+Også for alder gir modellene ulike svar: i SLX er den direkte effekten positiv (0,673) og den totale effekten ikke signifikant (z = 0,6), mens både den direkte og den totale effekten er negativ og signifikant i SDEM.
+Dette illustrerer hvorfor det er viktig å kontrollere for romlig avhengighet i feilleddet.
+Ellers risikerer vi å overvurdere de lokale spillovereffektene.
 
 ## Hvor godt fjerner modellene de romlige effektene?
 
 Til slutt undersøker vi hvor godt de ulike modellene fjerner den romlige avhengigheten i residualene, ved hjelp av Moran-plott og Moran's I for residualene fra OLS, SLX, SAR, SEM og SDEM med $k = 10$.
-
 
 ```{r}
 #| label: fig-moran-models
@@ -1071,134 +1346,255 @@ map_dfr(res_liste, \(r) {
   mt <- moran.test(r, lw_k10, randomisation = FALSE)
   tibble(`Moran's I` = mt$estimate[1], `p-verdi` = mt$p.value)
 }, .id = "Modell") |>
+  mutate(
+    `p-verdi` = if_else(
+      `p-verdi` < 0.001,
+      "< 0,001",
+      format(round(`p-verdi`, 3), decimal.mark = ",", nsmall = 3)
+    )
+  ) |>
   gt() |>
-  fmt_number(columns = `Moran's I`, decimals = 3) |>
-  fmt_scientific(columns = `p-verdi`, decimals = 2)
+  fmt_number(columns = `Moran's I`, decimals = 3, locale = "nb")
 ```
 
 @fig-moran-models og @tbl-moran-models viser at det er tydelige forskjeller mellom modellene.
 
-Residualene fra OLS- og SLX-modellene har fortsatt en klar positiv helning, med Moran's I på henholdsvis 0,319 og 0,306. At de romlig laggede forklaringsvariablene i SLX bare reduserer Moran's I marginalt, viser at naboboligenes målte egenskaper i liten grad forklarer den romlige avhengigheten. Mesteparten av avhengigheten skyldes forhold som ikke er målt i modellen.
+Residualene fra OLS- og SLX-modellene har fortsatt en klar positiv helning, med Moran's I på henholdsvis 0,319 og 0,306.
+At de romlig laggede forklaringsvariablene i SLX bare reduserer Moran's I marginalt, viser at naboboligenes målte egenskaper i liten grad forklarer den romlige avhengigheten.
+Mesteparten av avhengigheten skyldes forhold som ikke er målt i modellen.
 
-SAR-modellen fjerner det meste av autokorrelasjonen, og Moran's I faller til 0,037. Verdien er likevel fortsatt signifikant positiv (p < 0,001), og plottet viser en svak positiv helning. Det romlige laget i den avhengige variabelen fanger altså opp mye, men ikke all, romlig avhengighet.
+SAR-modellen fjerner det meste av autokorrelasjonen, og Moran's I faller til 0,037.
+Verdien er likevel fortsatt signifikant positiv (p \< 0,001), og plottet viser en svak positiv helning.
+Det romlige laget i den avhengige variabelen fanger altså opp mye, men ikke all, romlig avhengighet.
 
-For SEM- og SDEM-modellene er punktskyen tilnærmet flat, og Moran's I er svakt negativ (−0,019 og −0,017). Det er ingen gjenværende positiv romlig autokorrelasjon i residualene fra disse modellene. Dette er som forventet, siden det romlige feilleddet $\lambda Wu$ nettopp er ment å fange opp romlig korrelerte uobserverte faktorer. Den svakt negative verdien kan tyde på at feilleddsmodellene i noen grad overkorrigerer, men verdiene er så små at de har liten praktisk betydning.
+For SEM- og SDEM-modellene er punktskyen tilnærmet flat, og Moran's I er svakt negativ (−0,019 og −0,017).
+Det er ingen gjenværende positiv romlig autokorrelasjon i residualene fra disse modellene.
+Dette er som forventet, siden det romlige feilleddet $\lambda Wu$ nettopp er ment å fange opp romlig korrelerte uobserverte faktorer.
+Den svakt negative verdien kan tyde på at feilleddsmodellene i noen grad overkorrigerer, men verdiene er så små at de har liten praktisk betydning.
 
 ## Oppsummering av modellvalget
 
-Anselins LM-tester ga ikke et entydig svar, mens LeSages nestede tilnærming klart pekte på SDEM for begge vektmatrisene. Rangeringen av modellene er den samme for k = 3 og k = 10, men k = 10 gir høyest log-likelihood, og Moran-plottene viser at SDEM fjerner den positive romlige autokorrelasjonen i residualene. Vi bruker derfor SDEM-modellen med k = 10 som vår foretrukne modell. Forskjellen mellom de to tilnærmingene drøftes i oppgave 8.
+Anselins LM-tester ga ikke et entydig svar, mens LeSages nestede tilnærming klart pekte på SDEM for begge vektmatrisene.
+Rangeringen av modellene er den samme for k = 3 og k = 10, men k = 10 gir høyest log-likelihood, og Moran-plottene viser at SDEM fjerner den positive romlige autokorrelasjonen i residualene.
+Vi bruker derfor SDEM-modellen med k = 10 som vår foretrukne modell.
+Forskjellen mellom de to tilnærmingene drøftes i oppgave 8.
 
-
-# Oppgave 8 Diskusjon av resultatene 
+# Oppgave 8 Diskusjon av resultatene
 
 ## Økonomisk tolkning av den hedoniske prismodellen
 
-Den hedoniske prismodellen bygger på Rosen (1974), som viste at prisen på et differensiert gode kan forklares ut fra egenskapene til godet (Bishop et al., 2020, s. 262; Maslianskaia-Pautrel & Baumont, 2016, s. 923). En bolig består av en pakke med egenskaper: egenskaper ved selve boligen (H), som areal, alder og antall bad, og egenskaper ved beliggenheten (X), som avstand til sentrum, nabolagets sosioøkonomiske sammensetning og miljøforhold (Maslianskaia-Pautrel & Baumont, 2016, s. 923–924). Den hedoniske prisfunksjonen kan dermed skrives som
+Den hedoniske prismodellen viser at prisen på et differensiert gode kan forklares ut fra egenskapene til godet [@bishopBestPracticesUsing2020, s. 262; @maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 923].
+En bolig består av en pakke med egenskaper: egenskaper ved selve boligen (H), som areal, alder og antall bad, og egenskaper ved beliggenheten (X), som avstand til sentrum, nabolagets sosioøkonomiske sammensetning og miljøforhold [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 923-924].
+Den hedoniske prisfunksjonen kan dermed skrives som
 
-$$
-P = f(H, X_{env}, X_{other})
-$$
+$$P = f(H, X_{env}, X_{other})$$
 
-Den hedoniske prisfunksjonen er verken en etterspørselsfunksjon eller en tilbudsfunksjon. Den er en likevektsrelasjon som oppstår gjennom samspillet mellom kjøpere og selgere i boligmarkedet (Bishop et al., 2020, s. 262; Maslianskaia-Pautrel & Baumont, 2016, s. 923). I likevekt kan ingen husholdninger øke nytten ved å flytte. Den deriverte av prisfunksjonen med hensyn på en egenskap kan da tolkes som den *implisitte prisen* på egenskapen:
+Den hedoniske prisfunksjonen er verken en etterspørselsfunksjon eller en tilbudsfunksjon.
+Den er en likevektsrelasjon som oppstår gjennom samspillet mellom kjøpere og selgere i boligmarkedet [@bishopBestPracticesUsing2020, s. 262; @maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 923].
+I likevekt kan ingen husholdninger øke nytten ved å flytte.
+Den deriverte av prisfunksjonen med hensyn på en egenskap kan da tolkes som den *implisitte prisen* på egenskapen:
 
-$$
-MWTP_k = \frac{\partial P}{\partial x_k}
-$$
+$$MWTP_k = \frac{\partial P}{\partial x_k}$$
 
-Den implisitte prisen tilsvarer kjøpernes marginale betalingsvillighet (MWTP) for egenskapen (Bishop et al., 2020, s. 261–263; Maslianskaia-Pautrel & Baumont, 2016, s. 924). Tolkningen forutsetter at kjøperne er fullt informert, kan flytte fritt og kan velge kontinuerlige mengder av hver egenskap (Bishop et al., 2020, s. 262).
+Den implisitte prisen tilsvarer kjøpernes marginale betalingsvillighet (MWTP) for egenskapen [@bishopBestPracticesUsing2020, s. 261-263; @maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 924].
+Tolkningen forutsetter at kjøperne er fullt informert, kan flytte fritt og kan velge kontinuerlige mengder av hver egenskap [@bishopBestPracticesUsing2020, s. 262].
 
-I vår modell er den avhengige variabelen logaritmen av salgsprisen. Koeffisientene tolkes derfor som prosentvise endringer i prisen. For logaritmerte forklaringsvariabler, som boligareal, er koeffisientene elastisiteter. For dummyvariabler og variabler målt i nivå gir $100 \cdot (\exp(\beta) - 1)$ den eksakte prosentvise endringen (Wooldridge, 2019, kap. 6–7). Tidsdummyene fanger opp endringer i det generelle prisnivået i perioden 1993–1998. Dette er viktig fordi prisfunksjonen og de implisitte prisene kan endre seg over tid (Bishop et al., 2020, s. 264).
+I vår modell er den avhengige variabelen logaritmen av salgsprisen.
+Koeffisientene tolkes derfor som prosentvise endringer i prisen.
+For logaritmerte forklaringsvariabler, som boligareal, er koeffisientene elastisiteter.
+For dummyvariabler og variabler målt i nivå gir $100 \cdot (\exp(\beta) - 1)$ den eksakte prosentvise endringen.
+Tidsdummyene fanger opp endringer i det generelle prisnivået i perioden 1993–1998.
+Dette er viktig fordi prisfunksjonen og de implisitte prisene kan endre seg over tid [@bishopBestPracticesUsing2020, s. 264].
 
 ## Hvorfor trenger vi romlige regresjonsmodeller?
 
 Det er tre hovedgrunner til at vi trenger romlige regresjonsmodeller i en hedonisk analyse av boligpriser.
 
-**For det første er boligpriser og egenskapene deres romlig avhengige.** Like priser observeres oftere nær hverandre enn om prisene var tilfeldig fordelt, og forklaringsvariablene, som miljøforhold og nabolagskvalitet, er også romlig avhengige (Maslianskaia-Pautrel & Baumont, 2016, s. 924). Dette ser vi tydelig i våre data. EDA-en i @sec-eda viste klare klynger av dyre og billige boliger, og Moran's I for residualene fra OLS-modellen er 0,319 med ti naboer (@tbl-moran-ols). Mange egenskaper ved nabolaget er vanskelige å måle og havner derfor i feilleddet. Når de er romlig korrelerte, blir også residualene romlig korrelerte (Bishop et al., 2020, s. 270).
+**For det første er boligpriser og egenskapene deres romlig avhengige.** Like priser observeres oftere nær hverandre enn om prisene var tilfeldig fordelt, og forklaringsvariablene, som miljøforhold og nabolagskvalitet, er også romlig avhengige [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 924].
+Dette ser vi tydelig i våre data.
+EDA-en i @sec-eda viste klare klynger av dyre og billige boliger, og Moran's I for residualene fra OLS-modellen er 0,319 med ti naboer (@tbl-moran-ols).
+Mange egenskaper ved nabolaget er vanskelige å måle og havner derfor i feilleddet.
+Når de er romlig korrelerte, blir også residualene romlig korrelerte [@bishopBestPracticesUsing2020, s. 270].
 
-**For det andre gir OLS dårligere estimater når det finnes romlig avhengighet.** Hvis den romlige avhengigheten ligger i feilleddet, er OLS-estimatene ineffisiente og standardfeilene upålitelige. Hvis prisene påvirker hverandre direkte, slik som i SAR-modellen, blir OLS-estimatene også forventningsskjeve (Maslianskaia-Pautrel & Baumont, 2016, s. 938).
+**For det andre gir OLS dårligere estimater når det finnes romlig avhengighet.** Hvis den romlige avhengigheten ligger i feilleddet, er OLS-estimatene ineffisiente og standardfeilene upålitelige.
+Hvis prisene påvirker hverandre direkte, slik som i SAR-modellen, blir OLS-estimatene også forventningsskjeve [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 938].
 
-**For det tredje kan den implisitte prisen bli feiltolket.** Maslianskaia-Pautrel og Baumont (2016, s. 922, 925) understreker at romlige prosesser, i form av spredning og multiplikatoreffekter, gjør at den implisitte prisen ikke bare er den estimerte koeffisienten. Den består av en direkte effekt og en indirekte effekt som kommer fra naboene. Hvis vi ignorerer dette, risikerer vi å feilberegne betalingsvilligheten for egenskaper ved boligen og nabolaget (Maslianskaia-Pautrel & Baumont, 2016, s. 941–942).
+**For det tredje kan den implisitte prisen bli feiltolket.** @maslianskaia-pautrelEnvironmentalSpilloversTheir2016 understreker at romlige prosesser, i form av spredning og multiplikatoreffekter, gjør at den implisitte prisen ikke bare er den estimerte koeffisienten.
+Den består av en direkte effekt og en indirekte effekt som kommer fra naboene.
+Hvis vi ignorerer dette, risikerer vi å feilberegne betalingsvilligheten for egenskaper ved boligen og nabolaget [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 941-924].
 
-Det finnes også teoretiske grunner til å forvente romlige effekter i boligmarkedet. Kjøpere, selgere og eiendomsmeglere bruker salg i nabolaget som referanse for prisen, slik at «the market makes the prices» (Maslianskaia-Pautrel & Baumont, 2016, s. 934). I tillegg kapitaliseres romlig variasjon i lokale goder og ulemper i boligprisene (Bishop et al., 2020, s. 260), og miljøeksternaliteter har ofte lokale virkninger (Maslianskaia-Pautrel & Baumont, 2016, s. 924).
+Det finnes også teoretiske grunner til å forvente romlige effekter i boligmarkedet.
+Kjøpere, selgere og eiendomsmeglere bruker salg i nabolaget som referanse for prisen, slik at «the market makes the prices» [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 924].
+I tillegg kapitaliseres romlig variasjon i lokale goder og ulemper i boligprisene [@bishopBestPracticesUsing2020, s. 260], og miljøeksternaliteter har ofte lokale virkninger [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 924].
 
 ## Tre metoder for å velge modellspesifikasjon
 
-Maslianskaia-Pautrel og Baumont (2016, s. 933–934) beskriver tre tilnærminger til å velge den mest hensiktsmessige romlige modellen:
+@maslianskaia-pautrelEnvironmentalSpilloversTheir2016 beskriver tre tilnærminger til å velge den mest hensiktsmessige romlige modellen:
 
-1. **Spesifikt-til-generelt.** Vi starter med en ikke-romlig modell, som OLS, og tester om en mer generell romlig modell er bedre. Valget mellom SAR og SEM gjøres ved hjelp av Lagrange multiplier-testene LMERR og LMLAG og de robuste variantene av dem. Denne tilnærmingen har tradisjonelt vært mest brukt.
-2. **Generelt-til-spesifikt.** Vi starter med den mest generelle modellen, SDM eller SDEM, og tester trinn for trinn om restriksjoner på de romlige parameterne ($\rho$, $\lambda$ eller $\theta$) kan aksepteres. Testene gjøres med likelihood ratio-tester. Ifølge forfatterne anbefales denne tilnærmingen i økende grad.
-3. **«Story».** Modellen velges ut fra teori eller forhåndskunnskap om fenomenet. SAR-modellen velges for eksempel ofte i hedoniske studier fordi «the market makes the prices», SLX-modellen fordi den fanger opp eksternaliteter fra nabolaget, og SEM-modellen som en korreksjon for utelatte variabler og feilspesifikasjon.
+1.  **Spesifikt-til-generelt.** Vi starter med en ikke-romlig modell, som OLS, og tester om en mer generell romlig modell er bedre. Valget mellom SAR og SEM gjøres ved hjelp av Lagrange multiplier-testene LMERR og LMLAG og de robuste variantene av dem. Denne tilnærmingen har tradisjonelt vært mest brukt.
+2.  **Generelt-til-spesifikt.** Vi starter med den mest generelle modellen, SDM eller SDEM, og tester trinn for trinn om restriksjoner på de romlige parameterne ($\rho$, $\lambda$ eller $\theta$) kan aksepteres. Testene gjøres med likelihood ratio-tester. Ifølge forfatterne anbefales denne tilnærmingen i økende grad.
+3.  **«Story».** Modellen velges ut fra teori eller forhåndskunnskap om fenomenet. SAR-modellen velges for eksempel ofte i hedoniske studier fordi «the market makes the prices», SLX-modellen fordi den fanger opp eksternaliteter fra nabolaget, og SEM-modellen som en korreksjon for utelatte variabler og feilspesifikasjon.
 
-Forfatterne påpeker at det ikke finnes noen etablert enighet om hvilken tilnærming som er best (Maslianskaia-Pautrel & Baumont, 2016, s. 934).
+Forfatterne påpeker at det ikke finnes noen etablert enighet om hvilken tilnærming som er best [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 934].
 
-I denne oppgaven har vi brukt de to første tilnærmingene. Anselins (1988) metode med Rao's score-tester (@tbl-rstests) er tilnærmingen spesifikt-til-generelt. Den ga ikke et entydig svar: med k = 3 pekte de robuste testene mot SAR, og med k = 10 mot SEM. LeSages (2014) metode med nestede modeller og LR-tester (@tbl-lr) er tilnærmingen generelt-til-spesifikt, med SDEM som utgangspunkt. Den ga en klar konklusjon om at SDEM er den beste modellen. Vi har også trukket inn elementer fra den tredje tilnærmingen. Valget av SDEM framfor SDM som utgangspunkt bygger på en teoretisk vurdering av at boligprisdannelse er et lokalt og ikke et globalt fenomen. At metodene gir ulike svar, henger sammen med at Anselins tester bare velger mellom SAR og SEM ut fra OLS-residualene, uten å vurdere romlige lag i forklaringsvariablene. LeSages tilnærming starter derimot i den mest generelle lokale modellen og tester restriksjonene.
+I denne oppgaven har vi brukt de to første tilnærmingene.
+Anselins metode med Rao's score-tester (@tbl-rstests) er tilnærmingen spesifikt-til-generelt.
+Den ga ikke et entydig svar: med k = 3 pekte de robuste testene mot SAR, og med k = 10 mot SEM.
+@lesageWhatRegionalScientists2014 metode med nestede modeller og LR-tester (@tbl-lr) er tilnærmingen generelt-til-spesifikt, med SDEM som utgangspunkt.
+Den ga en klar konklusjon om at SDEM er den beste modellen.
+Vi har også trukket inn elementer fra den tredje tilnærmingen.
+Valget av SDEM framfor SDM som utgangspunkt bygger på en teoretisk vurdering av at boligprisdannelse er et lokalt og ikke et globalt fenomen.
+At metodene gir ulike svar, henger sammen med at Anselins tester bare velger mellom SAR og SEM ut fra OLS-residualene, uten å vurdere romlige lag i forklaringsvariablene.
+LeSages tilnærming starter derimot i den mest generelle lokale modellen og tester restriksjonene.
 
 ## Tolkning av koeffisientene
 
-Vi ser nærmere på to variabler: boligareal (`log_TLA`) og andelen svarte i census tracten (`andel_svart`). @tbl-diskusjon oppsummerer estimatene fra de ulike modellene med k = 10. For SAR, SLX og SDEM viser tabellen impactene, siden det er disse som gir den implisitte prisen.
+Vi ser nærmere på to variabler: boligareal (`log_TLA`) og andelen svarte i census tracten (`andel_svart`).
+@tbl-diskusjon oppsummerer estimatene fra de ulike modellene med k = 10.
+For SAR, SLX og SDEM viser tabellen impactene, siden det er disse som gir den implisitte prisen.
 
-| Modell | Effekt | Boligareal (log) | Andel svarte |
-|---|---|---|---|
-| OLS | Koeffisient | 0,628 (56,5) | −0,658 (−51,3) |
-| SEM | Koeffisient | 0,543 (56,3) | −0,638 (−18,2) |
-| SAR | Direkte | 0,514 | −0,361 |
-| | Indirekte | 0,554 | −0,389 |
-| | Total | 1,068 | −0,750 |
-| SLX | Direkte | 0,587 (52,0) | 0,210 (2,0) |
-| | Indirekte | 0,219 (17,1) | −0,912 (−8,5) |
-| | Total | 0,805 (55,8) | −0,703 (−55,2) |
-| SDEM | Direkte | 0,550 (57,1) | 0,114 (1,2) |
-| | Indirekte | 0,129 (6,3) | −0,869 (−8,8) |
-| | Total | 0,679 (29,2) | −0,755 (−22,8) |
+| Modell | Effekt      | Boligareal (log) | Andel svarte   |
+|--------|-------------|------------------|----------------|
+| OLS    | Koeffisient | 0,628 (56,5)     | −0,658 (−51,3) |
+| SEM    | Koeffisient | 0,543 (56,3)     | −0,638 (−18,2) |
+| SAR    | Direkte     | 0,514            | −0,361         |
+|        | Indirekte   | 0,554            | −0,389         |
+|        | Total       | 1,068            | −0,750         |
+| SLX    | Direkte     | 0,587 (52,0)     | 0,210 (2,0)    |
+|        | Indirekte   | 0,219 (17,1)     | −0,912 (−8,5)  |
+|        | Total       | 0,805 (55,8)     | −0,703 (−55,2) |
+| SDEM   | Direkte     | 0,550 (57,1)     | 0,114 (1,2)    |
+|        | Indirekte   | 0,129 (6,3)      | −0,869 (−8,8)  |
+|        | Total       | 0,679 (29,2)     | −0,755 (−22,8) |
 
-: Estimerte effekter av boligareal og andel svarte i de ulike modellene (k = 10). t- eller z-verdier i parentes. Alle effektene i SAR-modellen er signifikante på 0,1 %-nivå. {#tbl-diskusjon}
+: Estimerte effekter av boligareal og andel svarte i de ulike modellene (k = 10). t- eller z-verdier i parentes. Alle effektene i SAR-modellen er signifikante på 0,1 %-nivå.
 
-**I OLS- og SEM-modellene** tolkes koeffisientene direkte. Boligareal inngår logaritmert, så koeffisienten er en elastisitet: i OLS-modellen gir 1 % større boligareal 0,63 % høyere pris, alt annet likt. Andelen svarte er målt som en andel mellom 0 og 1. En økning på 10 prosentpoeng gir derfor en endring i prisen på $\exp(-0{,}0658) - 1 \approx -6{,}4$ % i OLS og $-6{,}2$ % i SEM. Fordi SEM-modellen bare har romlig avhengighet i feilleddet, er koeffisientene fortsatt de implisitte prisene (Maslianskaia-Pautrel & Baumont, 2016, s. 927).
+**I OLS- og SEM-modellene** tolkes koeffisientene direkte.
+Boligareal inngår logaritmert, så koeffisienten er en elastisitet: i OLS-modellen gir 1 % større boligareal 0,63 % høyere pris, alt annet likt.
+Andelen svarte er målt som en andel mellom 0 og 1.
+En økning på 10 prosentpoeng gir derfor en endring i prisen på $\exp(-0{,}0658) - 1 \approx -6{,}4$ % i OLS og $-6{,}2$ % i SEM.
+Fordi SEM-modellen bare har romlig avhengighet i feilleddet, er koeffisientene fortsatt de implisitte prisene [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 927].
 
-**I SAR-modellen** kan koeffisientene ikke tolkes direkte, fordi en endring i én bolig forplanter seg via $\rho W y$ til hele systemet. Vi må derfor bruke impactene, som diskuteres nærmere nedenfor.
+**I SAR-modellen** kan koeffisientene ikke tolkes direkte, fordi en endring i én bolig forplanter seg via $\rho W y$ til hele systemet.
+Vi må derfor bruke impactene, som diskuteres nærmere nedenfor.
 
-**I SLX- og SDEM-modellene** er den direkte effekten lik koeffisienten for variabelen selv ($\beta$). Den indirekte effekten er lik koeffisienten for det romlige laget ($\theta$), og måler hvordan prisen endres når gjennomsnittet av variabelen blant de ti nærmeste naboene endres. Den implisitte prisen er summen av de to (Maslianskaia-Pautrel & Baumont, 2016, s. 938). I SDEM-modellen gir 1 % større boligareal 0,55 % høyere pris for boligen selv. Om gjennomsnittsarealet blant naboboligene også øker med 1 %, øker prisen med ytterligere 0,13 %, til sammen 0,68 %. Med en gjennomsnittspris på om lag 79 000 dollar tilsvarer den totale effekten omtrent 540 dollar.
+**I SLX- og SDEM-modellene** er den direkte effekten lik koeffisienten for variabelen selv ($\beta$).
+Den indirekte effekten er lik koeffisienten for det romlige laget ($\theta$), og måler hvordan prisen endres når gjennomsnittet av variabelen blant de ti nærmeste naboene endres.
+Den implisitte prisen er summen av de to [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 938].
+I SDEM-modellen gir 1 % større boligareal 0,55 % høyere pris for boligen selv.
+Om gjennomsnittsarealet blant naboboligene også øker med 1 %, øker prisen med ytterligere 0,13 %, til sammen 0,68 %.
+Med en gjennomsnittspris på om lag 79 000 dollar tilsvarer den totale effekten omtrent 540 dollar.
 
 ## Er koeffisientene signifikante og rimelige?
 
-**Boligareal** er positiv og signifikant på 0,1 %-nivå i alle modellene. Fortegnet er som forventet: større boliger er dyrere. Elastisiteten ligger mellom 0,54 og 0,63 for den direkte effekten. Det betyr at prisen øker mindre enn proporsjonalt med arealet, noe som er rimelig, fordi den marginale verdien av ekstra areal er avtakende. Det er også verdt å merke seg hvordan koeffisienten endrer seg når vi kontrollerer for flere forhold. I modell 1, der boligareal er den eneste huskarakteristikken, er elastisiteten 1,27. Den faller til 0,80 i modell 2 og til 0,63 i OLS-modellen i oppgave 7, der vi kontrollerer for flere huskarakteristika. Den faller videre til 0,54–0,55 i SEM og SDEM, der det romlige feilleddet fanger opp uobserverte nabolagsforhold. Dette tyder på at de enklere modellene overvurderer effekten av boligareal, fordi store boliger gjerne har andre attraktive egenskaper og ligger i attraktive nabolag. Det er et eksempel på skjevhet fra utelatte variabler (Bishop et al., 2020, s. 270).
+**Boligareal** er positiv og signifikant på 0,1 %-nivå i alle modellene.
+Fortegnet er som forventet: større boliger er dyrere.
+Elastisiteten ligger mellom 0,54 og 0,63 for den direkte effekten.
+Det betyr at prisen øker mindre enn proporsjonalt med arealet, noe som er rimelig, fordi den marginale verdien av ekstra areal er avtakende.
+Det er også verdt å merke seg hvordan koeffisienten endrer seg når vi kontrollerer for flere forhold.
+I modell 1, der boligareal er den eneste huskarakteristikken, er elastisiteten 1,27.
+Den faller til 0,80 i modell 2 og til 0,63 i OLS-modellen i oppgave 7, der vi kontrollerer for flere huskarakteristika.
+Den faller videre til 0,54–0,55 i SEM og SDEM, der det romlige feilleddet fanger opp uobserverte nabolagsforhold.
+Dette tyder på at de enklere modellene overvurderer effekten av boligareal, fordi store boliger gjerne har andre attraktive egenskaper og ligger i attraktive nabolag.
+Det er et eksempel på skjevhet fra utelatte variabler [@bishopBestPracticesUsing2020, s. 270].
 
-Den totale effekten av boligareal er derimot klart større i SAR-modellen (1,068) enn i de andre modellene. En total elastisitet over 1 virker urimelig høy, og skyldes den globale multiplikatoren i SAR-modellen. I SDEM, som er vår foretrukne modell, er den totale effekten 0,68. Det er et mer troverdig anslag på den implisitte prisen.
+Den totale effekten av boligareal er derimot klart større i SAR-modellen (1,068) enn i de andre modellene.
+En total elastisitet over 1 virker urimelig høy, og skyldes den globale multiplikatoren i SAR-modellen.
+I SDEM, som er vår foretrukne modell, er den totale effekten 0,68.
+Det er et mer troverdig anslag på den implisitte prisen.
 
-**Andelen svarte** er negativ og signifikant i OLS, SEM og SAR. I SLX og SDEM er det bare den indirekte og den totale effekten som er klart signifikante. Den direkte effekten er ikke signifikant i SDEM og svakt positiv i SLX (z = 2,0). Dette er ikke et uttrykk for at den direkte effekten er null eller positiv. Det skyldes at X og WX er nesten perfekt korrelert for denne variabelen (0,996), slik at modellen ikke kan skille de to effektene. Den totale effekten er derimot svært stabil på tvers av modellene: mellom −0,64 og −0,76. Det tilsvarer omtrent 6–7 % lavere boligpris når andelen svarte i nabolaget øker med 10 prosentpoeng.
+**Andelen svarte** er negativ og signifikant i OLS, SEM og SAR.
+I SLX og SDEM er det bare den indirekte og den totale effekten som er klart signifikante.
+Den direkte effekten er ikke signifikant i SDEM og svakt positiv i SLX (z = 2,0).
+Dette er ikke et uttrykk for at den direkte effekten er null eller positiv.
+Det skyldes at X og WX er nesten perfekt korrelert for denne variabelen (0,996), slik at modellen ikke kan skille de to effektene.
+Den totale effekten er derimot svært stabil på tvers av modellene: mellom −0,64 og −0,76.
+Det tilsvarer omtrent 6–7 % lavere boligpris når andelen svarte i nabolaget øker med 10 prosentpoeng.
 
-Fortegnet er i tråd med EDA-en, som viste at de billigste boligene ligger i sentrumsnære bydeler. Det er likevel viktig å understreke at denne effekten ikke kan tolkes som en kausal effekt av etnisitet eller som kjøpernes betalingsvillighet for nabolagets etniske sammensetning. Variabelen fanger trolig opp andre forhold som er korrelert med befolkningssammensetningen, som historisk segregering, skolekvalitet og andre sosioøkonomiske forskjeller (Bishop et al., 2020, s. 270). Forutsetningen om at kjøperne kan flytte fritt (Bishop et al., 2020, s. 262) holder heller ikke nødvendigvis i et marked preget av segregering.
+Fortegnet er i tråd med EDA-en, som viste at de billigste boligene ligger i sentrumsnære bydeler.
+Det er likevel viktig å understreke at denne effekten ikke kan tolkes som en kausal effekt av etnisitet eller som kjøpernes betalingsvillighet for nabolagets etniske sammensetning.
+Variabelen fanger trolig opp andre forhold som er korrelert med befolkningssammensetningen, som historisk segregering, skolekvalitet og andre sosioøkonomiske forskjeller [@bishopBestPracticesUsing2020, s. 270].
+Forutsetningen om at kjøperne kan flytte fritt [@bishopBestPracticesUsing2020, s. 262] holder heller ikke nødvendigvis i et marked preget av segregering.
 
-Til slutt bør det nevnes at alle variablene blir signifikante med over 25 000 observasjoner, så størrelsen og fortegnet er mer informative enn p-verdiene. Breusch-Pagan-testen i oppgave 5 viste dessuten at feilleddene er heteroskedastiske. Standardfeilene i de romlige modellene er ikke korrigert for dette, og t- og z-verdiene bør derfor tolkes med en viss forsiktighet.
+Til slutt bør det nevnes at alle variablene blir signifikante med over 25 000 observasjoner, så størrelsen og fortegnet er mer informative enn p-verdiene.
+Breusch-Pagan-testen i oppgave 5 viste dessuten at feilleddene er heteroskedastiske.
+Standardfeilene i de romlige modellene er ikke korrigert for dette, og t- og z-verdiene bør derfor tolkes med en viss forsiktighet.
 
 ## Spatial impacts i SAR-modellen
 
-I SAR-modellen inngår prisene på naboboligene som en forklaringsvariabel gjennom $\rho W y$. Når en egenskap ved én bolig endres, påvirkes prisen på boligen selv, men også prisene på naboboligene, og deretter prisene på naboenes naboer og så videre. Den implisitte prisen består derfor av mer enn koeffisienten. Den kombinerer en tilbakekoblingseffekt («feedback effect») og en spredningseffekt («propagation effect») (Maslianskaia-Pautrel & Baumont, 2016, s. 921). *Spatial impacts* er målene vi bruker for å oppsummere disse effektene (LeSage, 2014; Maslianskaia-Pautrel & Baumont, 2016, s. 921–922):
+I SAR-modellen inngår prisene på naboboligene som en forklaringsvariabel gjennom $\rho W y$.
+Når en egenskap ved én bolig endres, påvirkes prisen på boligen selv, men også prisene på naboboligene, og deretter prisene på naboenes naboer og så videre.
+Den implisitte prisen består derfor av mer enn koeffisienten.
+Den kombinerer en tilbakekoblingseffekt («feedback effect») og en spredningseffekt («propagation effect») [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 921].
+*Spatial impacts* er målene vi bruker for å oppsummere disse effektene [@lesageWhatRegionalScientists2014; @maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 921-922]:
 
 - **Den direkte effekten** måler hvor mye prisen på en bolig endres når en egenskap ved boligen selv endres, inkludert tilbakekoblingen: endringen påvirker naboene, som igjen påvirker den opprinnelige boligen.
 - **Den indirekte effekten** måler hvor mye prisen på en bolig endres når egenskapen endres hos alle de andre boligene. Dette er spillover-effekten.
-- **Den totale effekten** er summen av de to, og gir den implisitte prisen for egenskapen (Maslianskaia-Pautrel & Baumont, 2016, s. 938).
+- **Den totale effekten** er summen av de to, og gir den implisitte prisen for egenskapen [@maslianskaia-pautrelEnvironmentalSpilloversTheir2016, s. 938]
 
-**Boligareal.** Koeffisienten i SAR-modellen er 0,495, mens den direkte effekten er 0,514. Differansen på 0,019 er tilbakekoblingen: når en bolig blir større og dyrere, øker prisene på naboboligene noe, og det gir igjen et lite tillegg til prisen på den opprinnelige boligen. Den indirekte effekten er 0,554. Den viser at prisen på en bolig øker med om lag 0,55 % hvis alle de andre boligene blir 1 % større. Den økonomiske mekanismen er at kjøpere og meglere bruker salgsprisene på nabolagets boliger som referanse. Større boliger i nabolaget gir høyere referansepriser, og dette spres videre i markedet. Den totale effekten er 1,068. Dette er den implisitte prisen ifølge SAR-modellen: hvis alle boligene ble 1 % større, ville prisen på en gitt bolig øke med om lag 1,07 %. Ved en gjennomsnittspris på 79 000 dollar tilsvarer det om lag 840 dollar.
+**Boligareal.** Koeffisienten i SAR-modellen er 0,495, mens den direkte effekten er 0,514.
+Differansen på 0,019 er tilbakekoblingen: når en bolig blir større og dyrere, øker prisene på naboboligene noe, og det gir igjen et lite tillegg til prisen på den opprinnelige boligen.
+Den indirekte effekten er 0,554.
+Den viser at prisen på en bolig øker med om lag 0,55 % hvis alle de andre boligene blir 1 % større.
+Den økonomiske mekanismen er at kjøpere og meglere bruker salgsprisene på nabolagets boliger som referanse.
+Større boliger i nabolaget gir høyere referansepriser, og dette spres videre i markedet.
+Den totale effekten er 1,068.
+Dette er den implisitte prisen ifølge SAR-modellen: hvis alle boligene ble 1 % større, ville prisen på en gitt bolig øke med om lag 1,07 %.
+Ved en gjennomsnittspris på 79 000 dollar tilsvarer det om lag 840 dollar.
 
-**Andelen svarte.** Koeffisienten er −0,348, mens den direkte effekten er −0,361. Tilbakekoblingen er dermed −0,013. Den indirekte effekten er −0,389, og den totale effekten −0,750. Det betyr at en økning i andelen svarte på 10 prosentpoeng i hele området er forbundet med om lag 7,2 % lavere boligpris. Litt over halvparten av effekten kommer gjennom spredning via prisene på naboboligene.
+**Andelen svarte.** Koeffisienten er −0,348, mens den direkte effekten er −0,361.
+Tilbakekoblingen er dermed −0,013.
+Den indirekte effekten er −0,389, og den totale effekten −0,750.
+Det betyr at en økning i andelen svarte på 10 prosentpoeng i hele området er forbundet med om lag 7,2 % lavere boligpris.
+Litt over halvparten av effekten kommer gjennom spredning via prisene på naboboligene.
 
-Et viktig poeng er at forholdet mellom den indirekte og den direkte effekten er det samme, omtrent 1,08, for alle variablene i SAR-modellen (@tbl-sar-impacts). Dette er ikke et empirisk resultat, men en følge av at alle spillovers styres av den samme parameteren $\rho$. SDEM-modellen har ikke denne begrensningen. Der er den indirekte effekten av boligareal bare 0,129, eller om lag en fjerdedel av den direkte effekten, mens den indirekte effekten av andelen svarte er større enn den direkte. Siden LR-testene og AIC viser at SDEM er den beste modellen, mener vi at de totale effektene fra SDEM gir de mest troverdige anslagene på de implisitte prisene. For boligareal er dette 0,68 og for andelen svarte −0,75. Den store totale effekten av boligareal i SAR-modellen illustrerer poenget til Maslianskaia-Pautrel og Baumont (2016, s. 921): hvilken romlig modell som velges, påvirker størrelsen på de estimerte implisitte prisene.
+Et viktig poeng er at forholdet mellom den indirekte og den direkte effekten er det samme, omtrent 1,08, for alle variablene i SAR-modellen (@tbl-sar-impacts).
+Dette er ikke et empirisk resultat, men en følge av at alle spillovers styres av den samme parameteren $\rho$.
+SDEM-modellen har ikke denne begrensningen.
+Der er den indirekte effekten av boligareal bare 0,129, eller om lag en fjerdedel av den direkte effekten, mens den indirekte effekten av andelen svarte er større enn den direkte.
+Siden LR-testene og AIC viser at SDEM er den beste modellen, mener vi at de totale effektene fra SDEM gir de mest troverdige anslagene på de implisitte prisene.
+For boligareal er dette 0,68 og for andelen svarte −0,75.
+Den store totale effekten av boligareal i SAR-modellen illustrerer poenget til @maslianskaia-pautrelEnvironmentalSpilloversTheir2016: hvilken romlig modell som velges, påvirker størrelsen på de estimerte implisitte prisene.
 
-# Oppsumering og konklusjon
+# Oppsummering og konklusjon
 
-Formålet med denne oppgaven har vært å undersøke hvilke faktorer som påvirker boligprisene i Lucas County, Ohio, og hvilken betydning geografiske forhold og romlig avhengighet har for boligmarkedet. Ved å kombinere boligtransaksjoner fra perioden 1993–1998 med sosioøkonomiske data fra ACS5 og miljødata fra EJScreen har vi gjennomført romlig dataanalyse, og diverse regresjonsanalyser.
-Den utforskende dataanalysen viste tydelige geografiske forskjeller i boligprisene. Boliger i og rundt Toledo sentrum hadde gjennomgående lavere priser, mens de høyeste prisene i større grad var konsentrert i forstedene. Analysen viste også sterk positiv romlig sammenheng mellom boligareal og boligprisene i nærliggende områder. Dette tyder på at boligmarkedet er geografisk strukturert, og at boliger med lignende egenskaper og prisnivå ofte ligger i nærheten av hverandre.
+Formålet med denne oppgaven har vært å undersøke hvilke faktorer som påvirker boligprisene i Lucas County, Ohio, og hvilken betydning geografiske forhold og romlig avhengighet har for boligmarkedet.
+Ved å kombinere boligtransaksjoner fra perioden 1993–1998 med sosioøkonomiske data fra ACS5 og miljødata fra EJScreen har vi gjennomført romlig dataanalyse, og diverse regresjonsanalyser.
+Den utforskende dataanalysen viste tydelige geografiske forskjeller i boligprisene.
+Boliger i og rundt Toledo sentrum hadde gjennomgående lavere priser, mens de høyeste prisene i større grad var konsentrert i forstedene.
+Analysen viste også sterk positiv romlig sammenheng mellom boligareal og boligprisene i nærliggende områder.
+Dette tyder på at boligmarkedet er geografisk strukturert, og at boliger med lignende egenskaper og prisnivå ofte ligger i nærheten av hverandre.
 
-De hedoniske regresjonsmodellene viste at både boligens størrelse, beliggenhet og sosioøkonomiske forhold har betydning for boligprisene. Forklaringskraften økte fra 38,8 % i den første modellen til 72,6 % da geografiske og sosioøkonomiske variabler ble inkludert. Ved å legge til miljøvariabler økte forklaringskraften videre til 74,7 %. Dette viser at boligpriser ikke bare kan forklares av boligens egne egenskaper, men også må sees i sammenheng med forholdene i området den ligger i. Den simultane F-testen viste dessuten at tidsdummyene samlet sett var statistisk signifikante, noe som understreker betydningen av å kontrollere for salgstidspunkt.
-De romlige analysene viste imidlertid at vanlige OLS-modeller ikke fanger opp alle sammenhengene i datamaterialet. Moran's I-testene av residualene viste betydelig positiv romlig autokorrelasjon, også etter at vi hadde kontrollert for en rekke bolig- og nabolagskarakteristika. Dette innebærer at boliger som ligger nær hverandre, fortsatt har prisavvik som er systematisk relatert. Resultatet viser hvorfor det er viktig å ta hensyn til romlig avhengighet i analyser av boligmarkedet.
+De hedoniske regresjonsmodellene viste at både boligens størrelse, beliggenhet og sosioøkonomiske forhold har betydning for boligprisene.
+Forklaringskraften økte fra 38,8 % i den første modellen til 72,6 % da geografiske og sosioøkonomiske variabler ble inkludert.
+Ved å legge til miljøvariabler økte forklaringskraften videre til 74,7 %.
+Dette viser at boligpriser ikke bare kan forklares av boligens egne egenskaper, men også må sees i sammenheng med forholdene i området den ligger i.
+Den simultane F-testen viste dessuten at tidsdummyene samlet sett var statistisk signifikante, noe som understreker betydningen av å kontrollere for salgstidspunkt.
+De romlige analysene viste imidlertid at vanlige OLS-modeller ikke fanger opp alle sammenhengene i datamaterialet.
+Moran's I-testene av residualene viste betydelig positiv romlig autokorrelasjon, også etter at vi hadde kontrollert for en rekke bolig- og nabolagskarakteristika.
+Dette innebærer at boliger som ligger nær hverandre, fortsatt har prisavvik som er systematisk relatert.
+Resultatet viser hvorfor det er viktig å ta hensyn til romlig avhengighet i analyser av boligmarkedet.
 
-Gjennom sammenligning av ulike romlige regresjonsmodeller fant vi at Spatial Durbin Error Model (SDEM) var den mest hensiktsmessige modellen for våre data. Modellen tar hensyn til både lokale påvirkninger fra naboboligenes egenskaper og romlig avhengighet i feilleddene. Dette er i tråd med Maslianskaia-Pautrel og Baumont (2016), som understreker at boligpriser kan påvirkes av lokale miljø- og nabolagseffekter, og at slike sammenhenger bør tas hensyn til ved hedonisk verdsetting.
+Gjennom sammenligning av ulike romlige regresjonsmodeller fant vi at Spatial Durbin Error Model (SDEM) var den mest hensiktsmessige modellen for våre data.
+Modellen tar hensyn til både lokale påvirkninger fra naboboligenes egenskaper og romlig avhengighet i feilleddene.
+Dette er i tråd med @maslianskaia-pautrelEnvironmentalSpilloversTheir2016, som understreker at boligpriser kan påvirkes av lokale miljø- og nabolagseffekter, og at slike sammenhenger bør tas hensyn til ved hedonisk verdsetting.
 
-Resultatene fra de romlige modellene viste at boligareal har en positiv og statistisk signifikant sammenheng med boligprisene. I SDEM-modellen var den direkte elastisiteten omtrent 0,55, mens den samlede effekten var omtrent 0,68 når lokale indirekte effekter ble inkludert. Analysen viste også sammenhenger mellom boligprisene og områdenes sosioøkonomiske sammensetning. Disse resultatene må imidlertid tolkes med forsiktighet, ettersom områdeforhold kan være nært knyttet til andre uobserverte egenskaper ved nabolagene.
+Resultatene fra de romlige modellene viste at boligareal har en positiv og statistisk signifikant sammenheng med boligprisene.
+I SDEM-modellen var den direkte elastisiteten omtrent 0,55, mens den samlede effekten var omtrent 0,68 når lokale indirekte effekter ble inkludert.
+Analysen viste også sammenhenger mellom boligprisene og områdenes sosioøkonomiske sammensetning.
+Disse resultatene må imidlertid tolkes med forsiktighet, ettersom områdeforhold kan være nært knyttet til andre uobserverte egenskaper ved nabolagene.
 
-Analysen har enkelte begrensninger. Boligtransaksjonene er fra en tidligere periode enn ACS5- og EJScreen-dataene, noe som skaper usikkerhet rundt hvor godt områdedataene beskriver forholdene på salgstidspunktet. I tillegg kan uobserverte bolig- og nabolagskarakteristika påvirke resultatene, og enkelte områdevariabler er sterkt korrelert med tilsvarende variabler for naboboligene. Dette gjør det vanskelig å skille direkte og indirekte effekter for enkelte forklaringsvariabler. Resultatene bør derfor tolkes som statistiske sammenhenger fremfor sikre årsakssammenhenger.
+Analysen har enkelte begrensninger.
+Boligtransaksjonene er fra en tidligere periode enn ACS5- og EJScreen-dataene, noe som skaper usikkerhet rundt hvor godt områdedataene beskriver forholdene på salgstidspunktet.
+I tillegg kan uobserverte bolig- og nabolagskarakteristika påvirke resultatene, og enkelte områdevariabler er sterkt korrelert med tilsvarende variabler for naboboligene.
+Dette gjør det vanskelig å skille direkte og indirekte effekter for enkelte forklaringsvariabler.
+Resultatene bør derfor tolkes som statistiske sammenhenger fremfor sikre årsakssammenhenger.
 
-Samlet sett viser oppgaven at boligpriser i Lucas County påvirkes av et samspill mellom boligens egne egenskaper, geografisk beliggenhet og forhold ved nabolaget. Et sentralt funn er at romlig avhengighet har betydning for hvordan disse sammenhengene bør analyseres og tolkes. Ved å gå fra tradisjonelle hedoniske OLS-modeller til romlige regresjonsmodeller får vi et mer nyansert bilde av boligprisdannelsen, særlig fordi vi kan skille mellom effekter knyttet til boligen selv og påvirkninger fra nærliggende boliger og områder.
+Samlet sett viser oppgaven at boligpriser i Lucas County påvirkes av et samspill mellom boligens egne egenskaper, geografisk beliggenhet og forhold ved nabolaget.
+Et sentralt funn er at romlig avhengighet har betydning for hvordan disse sammenhengene bør analyseres og tolkes.
+Ved å gå fra tradisjonelle hedoniske OLS-modeller til romlige regresjonsmodeller får vi et mer nyansert bilde av boligprisdannelsen, særlig fordi vi kan skille mellom effekter knyttet til boligen selv og påvirkninger fra nærliggende boliger og områder.
 
+# Litteraturliste
 
+::: {#refs}
+:::
