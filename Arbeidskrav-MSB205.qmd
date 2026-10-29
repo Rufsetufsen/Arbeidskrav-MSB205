@@ -1,5 +1,5 @@
 ---
-title: "....kom på noe...."
+title: "Atributtanalyse av boligmarkedet i Lucas County"
 authors: 
   - Harald Bjarne Vika
   - Irjan A. Vikre
@@ -70,8 +70,6 @@ library(spData)
 
 options(tigris_use_cache = TRUE)
 ```
-
-# Test slett
 
 ```{r}
 lc_ejscreen_map <- read_sf("./Data/EJ_Screen_2015_LucasCountyOH.gpkg")
@@ -1619,6 +1617,10 @@ Resultatene bør derfor tolkes som statistiske sammenhenger fremfor sikre årsak
 Samlet sett viser oppgaven at boligpriser i Lucas County påvirkes av et samspill mellom boligens egne egenskaper, geografisk beliggenhet og forhold ved nabolaget.
 Et sentralt funn er at romlig avhengighet har betydning for hvordan disse sammenhengene bør analyseres og tolkes.
 Ved å gå fra tradisjonelle hedoniske OLS-modeller til romlige regresjonsmodeller får vi et mer nyansert bilde av boligprisdannelsen, særlig fordi vi kan skille mellom effekter knyttet til boligen selv og påvirkninger fra nærliggende boliger og områder.
+
+# Bruk av KI
+
+I arbeid med denne oppgaven har KI blitt benyttet til å feilsøke i koder,gramatikk retting, samt som guide for hvordan vi kunne håndtere og hente data fra Geodata.Vi har benyttet Claude sin Opus 5,5 modell, og open AI sin Chat GBT 6 modell.
 
 # Litteraturliste
 
