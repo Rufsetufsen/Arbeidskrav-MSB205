@@ -838,12 +838,30 @@ nb_k10 <- knearneigh(coords, k = 10) |> knn2nb()
 
 lw_k3  <- nb2listw(nb_k3,  style = "W")
 lw_k10 <- nb2listw(nb_k10, style = "W")
+```
 
-summary(nb_k10)
+```{r}
+#| label: tbl-weights
+#| tbl-cap: "Oppsummering av vektmatrisene."
+nb_info <- function(nb, k) {
+  tibble(
+    Vektmatrise          = k,
+    Observasjoner        = length(nb),
+    Naboforbindelser     = sum(card(nb)),
+    `Naboer per bolig`   = mean(card(nb)),
+    Symmetrisk           = if_else(is.symmetric.nb(nb, verbose = FALSE), "Ja", "Nei")
+  )
+}
+
+bind_rows(nb_info(nb_k3, "k = 3"), nb_info(nb_k10, "k = 10")) |>
+  gt() |>
+  fmt_number(columns = c(Observasjoner, Naboforbindelser), decimals = 0, locale = "nb") |>
+  fmt_number(columns = `Naboer per bolig`, decimals = 0, locale = "nb")
 ```
 
 Oppsummeringen av vektmatrisen bekrefter at alle de 25 213 boligene har nøyaktig ti naboer, til sammen 252 130 naboforbindelser.
-Matrisen er ikke symmetrisk, slik vi forventet med k nærmeste naboer.
+@tbl-weights bekrefter at alle de 25 213 boligene har nøyaktig tre og ti naboer i de to vektmatrisene, til sammen 75 639 og 252 130 naboforbindelser.
+Ingen av matrisene er symmetriske, slik vi forventet med k nærmeste naboer.
 
 Før vi estimerer modellene med romlige lag i forklaringsvariablene, undersøker vi hvor like $X$ og $WX$ er.
 Variabler fra ACS5 har samme verdi for alle boliger i samme census tract, og de fleste naboene vil ligge i samme tract.
@@ -1604,3 +1622,4 @@ Ved å gå fra tradisjonelle hedoniske OLS-modeller til romlige regresjonsmodell
 
 ::: {#refs}
 :::
+
