@@ -71,6 +71,8 @@ library(spData)
 options(tigris_use_cache = TRUE)
 ```
 
+# Test slett
+
 ```{r}
 lc_ejscreen_map <- read_sf("./Data/EJ_Screen_2015_LucasCountyOH.gpkg")
 ```
@@ -1622,4 +1624,3 @@ Ved å gå fra tradisjonelle hedoniske OLS-modeller til romlige regresjonsmodell
 
 ::: {#refs}
 :::
-
