@@ -22,7 +22,7 @@ format:
     number-sections: true
     keep-tex: true
     fig-pos: "H"
-    output-file: "Arbeidskrav_HIK"
+    output-file: "Arbeidskrav_MSB205_HIK"
     citeproc: true
   pdf:
     documentclass: article
@@ -348,7 +348,7 @@ census_full |>
 census_full <- census_full |>
   filter(GEOID != "39095990000")
 
-nrow(census_full) # skal være 127
+nrow(census_full) 
 ```
 
 ## Projeksjon og vann
@@ -868,11 +868,16 @@ Variabler fra ACS5 har samme verdi for alle boliger i samme census tract, og de 
 Da kan $WX$ bli tilnærmet lik $X$, noe som gir problemer med multikollinearitet.
 
 ```{r}
-#| label: sp-wx-cor
-# Kollinearitetssjekk: hvor like er X og WX? (> 0.95 = problem)
+#| label: tbl-wx-cor
+#| tbl-cap: "Korrelasjon mellom X og WX (k = 10) for variablene med romlige lag."
 vars_durbin <- c("log_TLA", "age_sold", "log_lot", "pc_inntekt_1000", "andel_svart")
-map_dbl(vars_durbin, \(v) cor(lucas_df[[v]], lag.listw(lw_k10, lucas_df[[v]]))) |>
-  set_names(vars_durbin)
+
+tibble(
+  Variabel    = vars_durbin,
+  Korrelasjon = map_dbl(vars_durbin, \(v) cor(lucas_df[[v]], lag.listw(lw_k10, lucas_df[[v]])))
+) |>
+  gt() |>
+  fmt_number(columns = Korrelasjon, decimals = 3, locale = "nb")
 ```
 
 For huskarakteristikaene er korrelasjonen mellom X og WX moderat til høy (0,73 for log boligareal, 0,85 for alder og 0,88 for log tomtestørrelse).
@@ -1010,7 +1015,7 @@ Samtidig er begge de robuste testene signifikante for begge vektmatrisene, og SA
 Dette tyder på at det finnes både lag- og feilleddsavhengighet i dataene, og at verken SAR eller SEM alene er en fullgod spesifikasjon.
 Anselins tilnærming gir oss dermed ikke en entydig konklusjon.
 Når diagnostikken er uklar, kan vi sammenligne modellene direkte.
-Med k = 10 har SEM-modellen lavere AIC (5 085,1) enn SAR-modellen (5 201,7), noe som støtter konklusjonen fra de robuste testene om at SEM er den beste av de to.
+Med k = 10 har SEM-modellen lavere AIC (5 072,0) enn SAR-modellen (5 204,3), noe som støtter konklusjonen fra de robuste testene om at SEM er den beste av de to.
 Uklarheten i resultatene er også en motivasjon for å bruke LeSages tilnærming med nestede modeller.
 
 ### SAR-modellen og spatial impacts
@@ -1038,10 +1043,12 @@ Av samme grunn beregnes impactene ved hjelp av sporene (traces) til potensene av
 ```{r}
 #| label: sp-sar
 #| cache: true
-SAR_k10 <- lagsarlm(f_sp, data = lucas_df, listw = lw_k10, method = "MC")
-
-# Traces av W trengs for impacts når n er stor
+# Traces av W: brukes både til standardfeil og impacts
 tr_k10 <- trW(as(lw_k10, "CsparseMatrix"), type = "MC")
+
+set.seed(2026)
+SAR_k10 <- lagsarlm(f_sp, data = lucas_df, listw = lw_k10,
+                    method = "MC", trs = tr_k10)
 
 set.seed(2026)
 imp_SAR_k10 <- impacts(SAR_k10, tr = tr_k10, R = 500)
@@ -1052,7 +1059,7 @@ imp_SAR_sum <- summary(imp_SAR_k10, zstats = TRUE, short = TRUE)
 #| label: tbl-sar-impacts
 #| tbl-cap: "Impacts fra SAR-modellen (k = 10), utvalgte variabler. p-verdier i parentes."
 # Hjelpefunksjoner for norsk tallformat (brukes også i tbl-sdem-slx-impacts)
-nb   <- function(x, d) formatC(x, format = "f", digits = d, decimal.mark = ",")
+nb <- function(x, d) sub("^-", "−", formatC(x, format = "f", digits = d, decimal.mark = ","))
 p_nb <- function(p) if_else(p < 0.001, "< 0,001", nb(p, 3))
 
 valgte <- c("log_TLA", "age_sold", "log_lot", "dist_CBD",
@@ -1079,7 +1086,7 @@ tibble(
   gt()
 ```
 
-Den estimerte romlige autoregressive parameteren er $\rho$ = 0,537, og den er svært signifikant (z = 100,0).
+Den estimerte romlige autoregressive parameteren er $\rho$ = 0,536, og den er svært signifikant (z = 98,1).
 Prisen på en bolig henger altså sterkt sammen med prisene på de ti nærmeste naboboligene.
 Fordi $\rho$ er såpass høy, blir den romlige multiplikatoren stor.
 Med en radstandardisert vektmatrise er den totale effekten lik $\beta_r / (1 - \rho)$, altså omtrent 2,16 ganger koeffisienten.
@@ -1206,8 +1213,8 @@ map_dfr(
 ```
 
 @tbl-lr viser resultatene fra likelihood ratio-testene.
-Testen av $\theta = 0$ (SDEM mot SEM) gir LR = 765,5 med k = 3 og LR = 479,0 med k = 10, med 5 frihetsgrader.
-Testen av $\lambda = 0$ (SDEM mot SLX) gir LR = 5 086,2 og LR = 6 708,0 med én frihetsgrad.
+Testen av $\theta = 0$ (SDEM mot SEM) gir LR = 760,6 med k = 3 og LR = 468,9 med k = 10, med 5 frihetsgrader.
+Testen av $\lambda = 0$ (SDEM mot SLX) gir LR = 5 083,3 og LR = 6 711 med én frihetsgrad.
 Begge nullhypotesene forkastes klart for begge vektmatrisene.
 Verken de romlig laggede forklaringsvariablene eller det romlige feilleddet kan dermed utelates.
 Testene av SEM og SLX mot OLS er også klart signifikante, noe som bekrefter at OLS-modellen ikke er tilstrekkelig.
@@ -1216,37 +1223,105 @@ Konklusjonen fra LeSages tilnærming er dermed at SDEM er den beste modellen.
 Dette støttes av @tbl-aic-spatial, der SDEM har lavest AIC for begge vektmatrisene.
 Rangeringen er den samme for k = 3 og k = 10: SDEM, SEM, SLX og OLS.
 Videre har alle de romlige modellene høyere log-likelihood med k = 10 enn med k = 3.
-For SDEM øker log-likelihood fra −3 163,3 til −2 207,1.
+For SDEM øker log-likelihood fra −3 164,8 til −2 205,6.
 Vektmatrisen med ti naboer gir dermed en bedre beskrivelse av den romlige strukturen, og vi bruker k = 10 i den videre tolkningen.
 
-Det er verdt å merke seg at LR-testen av SEM mot OLS gir en mye større teststatistikk (7 747,1 med k = 10) enn testen av SLX mot OLS (1 518,1).
+Det er verdt å merke seg at LR-testen av SEM mot OLS gir en mye større teststatistikk (7 760,2 med k = 10) enn testen av SLX mot OLS (1 518,1).
 Det romlige feilleddet forklarer altså langt mer av den romlige avhengigheten enn de laggede forklaringsvariablene gjør.
 Dette tyder på at mye av den romlige avhengigheten skyldes uobserverte nabolagsforhold, og ikke spillovers fra naboboligenes målte egenskaper.
 
 ```{r}
-#| label: tbl-spatial-models
-#| tbl-cap: "OLS, SAR, SEM, SLX og SDEM (k = 10). Tidsdummyer inkludert, men ikke vist. z- og t-verdier i parentes."
+#| label: tbl-spatial-hus
+#| tbl-cap: "Romlige modeller (k = 10), del 1: konstantledd og huskarakteristika. Tidsdummyer inkludert, men ikke vist. z- og t-verdier i parentes."
+modeller_k10 <- list(OLS = mod_k10$OLS, SAR = SAR_k10, SEM = mod_k10$SEM,
+                     SLX = mod_k10$SLX, SDEM = mod_k10$SDEM)
+
+fmt_nb <- function(x) sub("^-", "−", formatC(x, format = "f", digits = 3, decimal.mark = ","))
+
 modelsummary(
-  list(OLS = mod_k10$OLS, SAR = SAR_k10, SEM = mod_k10$SEM,
-       SLX = mod_k10$SLX, SDEM = mod_k10$SDEM),
+  modeller_k10,
   statistic = "statistic",
-  coef_omit = "year_month",
-  coef_rename = c("I.age_sold.2." = "I(age_sold^2)", "I.age_sold.3." = "I(age_sold^3)"),
-  fmt = function(x) formatC(x, format = "f", digits = 3, decimal.mark = ","),
-  stars = TRUE,
+  coef_map = c(
+    "(Intercept)"    = "Konstantledd",
+    "log_TLA"        = "log_TLA",
+    "age_sold"       = "age_sold",
+    "I(age_sold^2)"  = "age_sold²",
+    "I.age_sold.2."  = "age_sold²",
+    "I(age_sold^3)"  = "age_sold³",
+    "I.age_sold.3."  = "age_sold³",
+    "log_lot"        = "log_lot",
+    "rooms"          = "rooms",
+    "beds"           = "beds",
+    "baths"          = "baths",
+    "halfbaths"      = "halfbaths",
+    "garagebasement" = "Garasje: kjeller",
+    "garageattached" = "Garasje: tilbygd",
+    "garagedetached" = "Garasje: frittstående",
+    "garagecarport"  = "Garasje: carport"
+  ),
+  fmt = fmt_nb,
+  stars = c("*" = 0.05, "**" = 0.01, "***" = 0.001),
+  gof_map = NA,
+  output = "gt"
+)
+```
+
+```{r}
+#| label: tbl-spatial-omr
+#| tbl-cap: "Romlige modeller (k = 10), del 2: beliggenhet og områdevariabler. z- og t-verdier i parentes."
+modelsummary(
+  modeller_k10,
+  statistic = "statistic",
+  coef_map = c(
+    "dist_CBD"        = "dist_CBD",
+    "pc_inntekt_1000" = "pc_inntekt_1000",
+    "andel_svart"     = "andel_svart",
+    "andel_asiatisk"  = "andel_asiatisk",
+    "andel_ledige"    = "andel_ledige",
+    "mwtt"            = "mwtt",
+    "LOWINCPCT"       = "LOWINCPCT",
+    "LESSHSPCT"       = "LESSHSPCT",
+    "PTRAF"           = "PTRAF",
+    "PRE1960PCT"      = "PRE1960PCT",
+    "PM25"            = "PM25"
+  ),
+  fmt = fmt_nb,
+  stars = c("*" = 0.05, "**" = 0.01, "***" = 0.001),
+  gof_map = NA,
+  output = "gt"
+)
+```
+
+```{r}
+#| label: tbl-spatial-romlig
+#| tbl-cap: "Romlige modeller (k = 10), del 3: romlige lag, romlige parametere og modelltilpasning. z-verdier i parentes."
+modelsummary(
+  modeller_k10[c("SAR", "SEM", "SLX", "SDEM")],
+  statistic = "statistic",
+  coef_map = c(
+    "lag.log_TLA"         = "W · log_TLA",
+    "lag.age_sold"        = "W · age_sold",
+    "lag.log_lot"         = "W · log_lot",
+    "lag.pc_inntekt_1000" = "W · pc_inntekt_1000",
+    "lag.andel_svart"     = "W · andel_svart",
+    "rho"                 = "ρ",
+    "lambda"              = "λ"
+  ),
+  fmt = fmt_nb,
+  stars = c("*" = 0.05, "**" = 0.01, "***" = 0.001),
   gof_map = tribble(
     ~raw,     ~clean,           ~fmt,
     "nobs",   "Antall obs.",    function(x) formatC(x, format = "d", big.mark = " "),
     "aic",    "AIC",            function(x) formatC(x, format = "f", digits = 1, big.mark = " ", decimal.mark = ","),
-    "logLik", "Log-likelihood", function(x) formatC(x, format = "f", digits = 1, big.mark = " ", decimal.mark = ",")
+    "logLik", "Log-likelihood", function(x) sub("^-", "−", formatC(x, format = "f", digits = 1, big.mark = " ", decimal.mark = ","))
   ),
   output = "gt"
 )
 ```
 
-@tbl-spatial-models viser at de romlige parameterne er store og svært signifikante: $\rho$ = 0,537 i SAR-modellen, og $\lambda$ = 0,727 i SEM-modellen og 0,692 i SDEM-modellen.
+@tbl-spatial-romlig viser at de romlige parameterne er store og svært signifikante: $\rho$ = 0,536 i SAR-modellen, og $\lambda$ = 0,729 i SEM-modellen og 0,693 i SDEM-modellen.
 
-Koeffisientene for huskarakteristikaene er stabile på tvers av modellene og har forventet fortegn.
+Koeffisientene for huskarakteristikaene er stabile på tvers av modellene og har forventet fortegn (@tbl-spatial-hus).
 Boligareal, tomtestørrelse, antall bad og halvbad og garasje har alle positive og signifikante effekter.
 For eksempel gir en frittstående garasje omtrent 16 % høyere pris i SDEM-modellen (exp(0,151) − 1), sammenlignet med en bolig uten garasje.
 
@@ -1313,7 +1388,7 @@ Her ser vi på de øvrige variablene.
 
 **Tomtestørrelse og alder.** Tomtestørrelsen hos naboene har ingen signifikant effekt (z = 0,9).
 Kjøpere legger altså vekt på sin egen tomt, men ikke på hvor store tomter naboene har.
-Alderen på naboboligene har derimot en sterk negativ effekt (−0,505, z = −16,5).
+Alderen på naboboligene har derimot en sterk negativ effekt (−0,504, z = −16,5).
 Boliger i nabolag med eldre boligmasse har dermed lavere priser, uavhengig av boligens egen alder.
 Den direkte effekten av alder må tolkes sammen med andre- og tredjegradsleddene, og er derfor vanskeligere å tolke direkte.
 
@@ -1387,7 +1462,7 @@ SAR-modellen fjerner det meste av autokorrelasjonen, og Moran's I faller til 0,0
 Verdien er likevel fortsatt signifikant positiv (p \< 0,001), og plottet viser en svak positiv helning.
 Det romlige laget i den avhengige variabelen fanger altså opp mye, men ikke all, romlig avhengighet.
 
-For SEM- og SDEM-modellene er punktskyen tilnærmet flat, og Moran's I er svakt negativ (−0,019 og −0,017).
+For SEM- og SDEM-modellene er punktskyen tilnærmet flat, og Moran's I er svakt negativ (−0,020 og −0,017).
 Det er ingen gjenværende positiv romlig autokorrelasjon i residualene fra disse modellene.
 Dette er som forventet, siden det romlige feilleddet $\lambda Wu$ nettopp er ment å fange opp romlig korrelerte uobserverte faktorer.
 Den svakt negative verdien kan tyde på at feilleddsmodellene i noen grad overkorrigerer, men verdiene er så små at de har liten praktisk betydning.
@@ -1460,7 +1535,7 @@ Forfatterne påpeker at det ikke finnes noen etablert enighet om hvilken tilnær
 I denne oppgaven har vi brukt de to første tilnærmingene.
 Anselins metode med Rao's score-tester (@tbl-rstests) er tilnærmingen spesifikt-til-generelt.
 Den ga ikke et entydig svar: med k = 3 pekte de robuste testene mot SAR, og med k = 10 mot SEM.
-@lesageWhatRegionalScientists2014 metode med nestede modeller og LR-tester (@tbl-lr) er tilnærmingen generelt-til-spesifikt, med SDEM som utgangspunkt.
+Metiden til @lesageWhatRegionalScientists2014 med nestede modeller og LR-tester (@tbl-lr) er tilnærmingen generelt-til-spesifikt, med SDEM som utgangspunkt.
 Den ga en klar konklusjon om at SDEM er den beste modellen.
 Vi har også trukket inn elementer fra den tredje tilnærmingen.
 Valget av SDEM framfor SDM som utgangspunkt bygger på en teoretisk vurdering av at boligprisdannelse er et lokalt og ikke et globalt fenomen.
@@ -1480,13 +1555,13 @@ For SAR, SLX og SDEM viser tabellen impactene, siden det er disse som gir den im
 | SEM    | Koeffisient | 0,543 (56,3)     | −0,638 (−18,2) |
 | SAR    | Direkte     | 0,514            | −0,361         |
 |        | Indirekte   | 0,554            | −0,389         |
-|        | Total       | 1,068            | −0,750         |
+|        | Total       | 1,067            | −0,750         |
 | SLX    | Direkte     | 0,587 (52,0)     | 0,210 (2,0)    |
 |        | Indirekte   | 0,219 (17,1)     | −0,912 (−8,5)  |
 |        | Total       | 0,805 (55,8)     | −0,703 (−55,2) |
 | SDEM   | Direkte     | 0,550 (57,1)     | 0,114 (1,2)    |
 |        | Indirekte   | 0,129 (6,3)      | −0,869 (−8,8)  |
-|        | Total       | 0,679 (29,2)     | −0,755 (−22,8) |
+|        | Total       | 0,679 (29,2)     | −0,755 (−22,7) |
 
 Estimerte effekter av boligareal og andel svarte i de ulike modellene (k = 10).
 t- eller z-verdier i parentes.
@@ -1522,7 +1597,7 @@ Den faller videre til 0,54–0,55 i SEM og SDEM, der det romlige feilleddet fang
 Dette tyder på at de enklere modellene overvurderer effekten av boligareal, fordi store boliger gjerne har andre attraktive egenskaper og ligger i attraktive nabolag.
 Det er et eksempel på skjevhet fra utelatte variabler [@bishopBestPracticesUsing2020, s. 270].
 
-Den totale effekten av boligareal er derimot klart større i SAR-modellen (1,068) enn i de andre modellene.
+Den totale effekten av boligareal er derimot klart større i SAR-modellen (1,067) enn i de andre modellene.
 En total elastisitet over 1 virker urimelig høy, og skyldes den globale multiplikatoren i SAR-modellen.
 I SDEM, som er vår foretrukne modell, er den totale effekten 0,68.
 Det er et mer troverdig anslag på den implisitte prisen.
@@ -1562,7 +1637,7 @@ Den indirekte effekten er 0,554.
 Den viser at prisen på en bolig øker med om lag 0,55 % hvis alle de andre boligene blir 1 % større.
 Den økonomiske mekanismen er at kjøpere og meglere bruker salgsprisene på nabolagets boliger som referanse.
 Større boliger i nabolaget gir høyere referansepriser, og dette spres videre i markedet.
-Den totale effekten er 1,068.
+Den totale effekten er 1,067.
 Dette er den implisitte prisen ifølge SAR-modellen: hvis alle boligene ble 1 % større, ville prisen på en gitt bolig øke med om lag 1,07 %.
 Ved en gjennomsnittspris på 79 000 dollar tilsvarer det om lag 840 dollar.
 
