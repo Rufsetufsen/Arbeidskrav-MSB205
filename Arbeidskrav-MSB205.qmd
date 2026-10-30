@@ -1,10 +1,10 @@
 ---
-title: "Atributtanalyse av boligmarkedet i Lucas County"
+title: "Location, location, location? Hedoniske og romlige prismodeller for Lucas County, Ohio"
 authors: 
   - Harald Bjarne Vika
   - Irjan A. Vikre
   - Kristoffer Tufta
-abstract: "Her vil vi esitmere hedoniske og romlige regresjonsmodeller for boligsalg I Lucas County, Ohio, og hvilke modell som viser effektene best"
+abstract: "I dette term paperet analyserer vi 25 213 boligsalg i Lucas County, Ohio, fra 1993–1998, koblet med sosioøkonomiske data fra American Community Survey og miljødata fra EPAs EJScreen. Hedoniske OLS-modeller viser at nabolaget betyr nesten like mye som boligen: forklaringskraften øker fra 38,8 % med bare boligkarakteristika til 74,7 % når beliggenhet, sosioøkonomiske forhold og miljøvariabler inkluderes. Residualene er likevel sterkt romlig autokorrelerte (Moran's I mellom 0,32 og 0,37), og OLS gir derfor ikke et fullstendig bilde. Rao's score-tester etter Anselin peker både mot SAR og SEM, mens LeSages nestede likelihood ratio-tester entydig foretrekker Spatial Durbin Error Model (SDEM), både med 3 og 10 nærmeste naboer. I SDEM er den direkte elastisiteten for boligareal 0,55 og den totale 0,68, og en økning på 10 prosentpoeng i andelen svarte innbyggere er forbundet med om lag 7 % lavere boligpris. Valget av romlig modell påvirker de implisitte prisene merkbart, og tolkningen av hedoniske estimater bør derfor ta hensyn til romlige effekter."
 number-sections: true
 number-depth: 3
 lang: nb-NO
@@ -41,7 +41,9 @@ editor_options:
 echo: false
 eval: true
 warning: false
-bibliography: references.bib
+bibliography:  
+- references.bib
+- grateful-refs.bib
 nocite: '@*'
 ---
 
@@ -67,6 +69,7 @@ library(gt)
 library(flextable)
 library(modelsummary)
 library(spData)
+library(grateful)
 
 options(tigris_use_cache = TRUE)
 ```
@@ -493,7 +496,7 @@ boligdata <- lucas_full |>
 summary(boligdata)
 ```
 
-## Hedonistiske modeller
+## Hedoniske modeller
 
 For å undersøke hvilke faktorer som påvirker boligprisene i Lucas County, estimeres tre hedoniske boligprismodeller med et gradvis utvidet sett av forklaringsvariabler.
 Modellvalgene tar utgangspunkt i @maslianskaia-pautrelEnvironmentalSpilloversTheir2016, som undersøker hvordan boligpriser påvirkes av boligens egenskaper, geografisk beliggenhet og miljørelaterte forhold.
@@ -609,7 +612,7 @@ bptest(modell2)
 bptest(modell3)
 ```
 
-## Regresjondmodell
+## Regresjonsmodell
 
 ```{r}
 library(modelsummary)
@@ -652,7 +655,7 @@ En økning i boligarealet på 1 % er dermed forbundet med omtrent 1,27 % høyere
 Resultatet er i tråd med hedonisk pristeori, hvor boligens fysiske egenskaper forventes å ha betydning for markedsverdien.
 Samtidig viser den relativt lave forklaringskraften at boligareal og tidsdummyer alene ikke er tilstrekkelig til å forklare variasjonen i boligprisene.
 
-### Model 2
+### Modell 2
 
 I modell 2 inkluderes avstand til sentrum og sosioøkonomiske variabler fra ACS5 og EJScreen.
 Forklaringskraften øker betydelig, fra 38,8 % til 72,6 %.
@@ -1693,9 +1696,30 @@ Samlet sett viser oppgaven at boligpriser i Lucas County påvirkes av et samspil
 Et sentralt funn er at romlig avhengighet har betydning for hvordan disse sammenhengene bør analyseres og tolkes.
 Ved å gå fra tradisjonelle hedoniske OLS-modeller til romlige regresjonsmodeller får vi et mer nyansert bilde av boligprisdannelsen, særlig fordi vi kan skille mellom effekter knyttet til boligen selv og påvirkninger fra nærliggende boliger og områder.
 
+# Programvare og R-pakker
+
+Analysen er gjennomført i `r R.version.string` med RStudio som utviklingsmiljø og Quarto for rapportskriving.
+Den utforskende romlige analysen i @sec-eda er gjort i GeoDa [@anselinGeoDaIntroductionSpatial2006].
+@tbl-pakker viser R-pakkene vi har brukt.
+
+```{r}
+#| label: tbl-pakker
+#| tbl-cap: "R-pakker brukt i analysen."
+pakker <- grateful::cite_packages(
+  output = "table",
+  out.dir = ".",
+  bib.file = "grateful-refs",
+  pkgs = "Session",
+  cite.tidyverse = TRUE
+)
+
+knitr::kable(pakker, col.names = c("Pakke", "Versjon", "Referanse"))
+```
+
 # Bruk av KI
 
-I arbeid med denne oppgaven har KI blitt benyttet til å feilsøke i koder,gramatikk retting, samt som guide for hvordan vi kunne håndtere og hente data fra Geodata.Vi har benyttet Claude sin Opus 5,5 modell, og open AI sin Chat GBT 6 modell.
+I arbeid med denne oppgaven har KI blitt benyttet til å feilsøke i koder, grammatikk retting, samt som sparringspartner for hvordan vi kunne håndtere data i Geoda.
+Til dette har vi benyttet Claude sin Opus 5,5 modell, og open AI sin Chat GPT 6 modell.
 
 # Litteraturliste
 
